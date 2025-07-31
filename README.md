@@ -5,7 +5,8 @@
 [![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Security](https://img.shields.io/badge/security-hardened-red.svg)](docs/security.md)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/morningstarxcdcode/universal-ai-governor/actions)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/MStarRobotics/Universal-AI-Governor/actions)
+[![Security Scan](https://img.shields.io/badge/security--scan-clean-brightgreen.svg)](SECURITY_UPDATES.md)
 
 ```
 +================================================================+
