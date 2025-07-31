@@ -1,0 +1,661 @@
+# Multimedia Governance & Regulatory Compliance CI Pipeline
+# Advanced testing for vision/audio attacks and privacy compliance
+
+name: Multimedia & Regulatory CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run comprehensive multimedia tests weekly
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: 'Test suite to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - vision_attacks
+        - audio_attacks
+        - gdpr_compliance
+        - hipaa_compliance
+        - performance_scale
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Multimedia testing configuration
+  VISION_MODEL_PATH: ./models/vision_security
+  AUDIO_MODEL_PATH: ./models/audio_security
+  PRIVACY_ENGINE_ENABLED: true
+  REGULATORY_COMPLIANCE_MODE: strict
+
+jobs:
+  # Vision attack testing with adversarial examples
+  vision-attack-tests:
+    name: Vision Model Attack Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'vision_attacks' || github.event.inputs.test_suite == ''
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install vision processing dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip python3-opencv
+        pip3 install torch torchvision pillow numpy
+        
+        # Install adversarial attack libraries
+        pip3 install foolbox adversarial-robustness-toolbox
+
+    - name: Setup vision models
+      run: |
+        mkdir -p models/vision_security
+        # Download pre-trained models for testing
+        wget -O models/vision_security/resnet50.pth https://download.pytorch.org/models/resnet50-19c8e357.pth || true
+        
+        # Create mock models for testing if download fails
+        python3 -c "
+import torch
+import torchvision.models as models
+model = models.resnet50(pretrained=False)
+torch.save(model.state_dict(), 'models/vision_security/resnet50_mock.pth')
+"
+
+    - name: Build with vision features
+      run: |
+        cargo build --release --features "vision-security,adversarial-detection,image-processing"
+
+    - name: Run FGSM adversarial tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::fgsm_attacks -- --nocapture
+
+    - name: Run PGD adversarial tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::pgd_attacks -- --nocapture
+
+    - name: Run universal patch tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::universal_patches -- --nocapture
+
+    - name: Run steganography detection tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::steganography_detection -- --nocapture
+
+    - name: Run deepfake detection tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::deepfake_detection -- --nocapture
+
+    - name: Run QR code injection tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::qr_code_injection -- --nocapture
+
+    - name: Run physical world attack tests
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests::physical_attacks -- --nocapture
+
+    - name: Generate vision attack report
+      run: |
+        cargo test --release --test multimedia::vision_attack_tests -- --format json > vision_attack_results.json
+
+    - name: Upload vision test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: vision-attack-results
+        path: vision_attack_results.json
+
+  # Audio attack testing with hidden commands
+  audio-attack-tests:
+    name: Audio/Voice Attack Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'audio_attacks' || github.event.inputs.test_suite == ''
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install audio processing dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip ffmpeg libsndfile1-dev
+        pip3 install librosa soundfile numpy scipy
+        
+        # Install speech recognition and synthesis tools
+        pip3 install whisper speechrecognition pydub
+
+    - name: Setup audio models
+      run: |
+        mkdir -p models/audio_security
+        # Download Whisper model for speech recognition testing
+        python3 -c "
+import whisper
+model = whisper.load_model('base')
+# Model is cached automatically
+"
+
+    - name: Build with audio features
+      run: |
+        cargo build --release --features "audio-security,speech-recognition,ultrasonic-detection"
+
+    - name: Run ultrasonic injection tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::ultrasonic_injection -- --nocapture
+
+    - name: Run psychoacoustic masking tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::psychoacoustic_masking -- --nocapture
+
+    - name: Run adversarial audio tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::adversarial_audio -- --nocapture
+
+    - name: Run voice cloning detection tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::voice_cloning -- --nocapture
+
+    - name: Run speed manipulation tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::speed_manipulation -- --nocapture
+
+    - name: Run frequency shifting tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::frequency_shifting -- --nocapture
+
+    - name: Run echo hiding tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::echo_hiding -- --nocapture
+
+    - name: Run audio steganography tests
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests::steganography -- --nocapture
+
+    - name: Generate audio attack report
+      run: |
+        cargo test --release --test multimedia::audio_attack_tests -- --format json > audio_attack_results.json
+
+    - name: Upload audio test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: audio-attack-results
+        path: audio_attack_results.json
+
+  # GDPR compliance testing
+  gdpr-compliance-tests:
+    name: GDPR Compliance Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'gdpr_compliance' || github.event.inputs.test_suite == ''
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Setup privacy compliance tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sqlite3 postgresql-client
+        
+        # Install privacy analysis tools
+        pip3 install anonymization-toolkit privacy-meter
+
+    - name: Build with privacy features
+      run: |
+        cargo build --release --features "privacy-engine,gdpr-compliance,data-retention"
+
+    - name: Run right to be forgotten tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::right_to_be_forgotten -- --nocapture
+
+    - name: Run data portability tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::data_portability -- --nocapture
+
+    - name: Run consent withdrawal tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::consent_withdrawal -- --nocapture
+
+    - name: Run cross-border transfer tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::cross_border_transfers -- --nocapture
+
+    - name: Run breach notification tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::breach_notification -- --nocapture
+
+    - name: Run data minimization tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::data_minimization -- --nocapture
+
+    - name: Run retention period tests
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests::retention_periods -- --nocapture
+
+    - name: Generate GDPR compliance report
+      run: |
+        cargo test --release --test regulatory::gdpr_compliance_tests -- --format json > gdpr_compliance_results.json
+
+    - name: Upload GDPR test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: gdpr-compliance-results
+        path: gdpr_compliance_results.json
+
+  # HIPAA compliance testing
+  hipaa-compliance-tests:
+    name: HIPAA Compliance Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'hipaa_compliance' || github.event.inputs.test_suite == ''
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Build with HIPAA features
+      run: |
+        cargo build --release --features "hipaa-compliance,phi-detection,healthcare-privacy"
+
+    - name: Run PHI detection tests
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests::phi_detection -- --nocapture
+
+    - name: Run minimum necessary tests
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests::minimum_necessary -- --nocapture
+
+    - name: Run access control tests
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests::access_controls -- --nocapture
+
+    - name: Run audit trail tests
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests::audit_trails -- --nocapture
+
+    - name: Run encryption tests
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests::encryption_requirements -- --nocapture
+
+    - name: Generate HIPAA compliance report
+      run: |
+        cargo test --release --test regulatory::hipaa_compliance_tests -- --format json > hipaa_compliance_results.json
+
+    - name: Upload HIPAA test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: hipaa-compliance-results
+        path: hipaa_compliance_results.json
+
+  # Black Friday scale testing
+  black-friday-scale-tests:
+    name: Black Friday Scale Tests
+    runs-on: ubuntu-latest
+    if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'performance_scale' || github.event_name == 'schedule'
+    timeout-minutes: 120
+
+    strategy:
+      matrix:
+        load_scenario: [normal, peak, extreme]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install load testing tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y apache2-utils wrk hey
+        cargo install drill
+
+    - name: Build optimized release
+      run: |
+        cargo build --release --features "high-performance,load-testing,metrics"
+
+    - name: Start Governor service cluster
+      run: |
+        # Start multiple instances for load balancing
+        for i in {1..3}; do
+          PORT=$((8080 + i)) cargo run --release --bin universal-ai-governor &
+          echo "Started instance on port $((8080 + i))"
+        done
+        sleep 15  # Wait for services to start
+
+    - name: Configure load parameters
+      run: |
+        case "${{ matrix.load_scenario }}" in
+          normal)
+            echo "CONNECTIONS=100" >> $GITHUB_ENV
+            echo "DURATION=300" >> $GITHUB_ENV
+            echo "RPS=50" >> $GITHUB_ENV
+            ;;
+          peak)
+            echo "CONNECTIONS=500" >> $GITHUB_ENV
+            echo "DURATION=600" >> $GITHUB_ENV
+            echo "RPS=200" >> $GITHUB_ENV
+            ;;
+          extreme)
+            echo "CONNECTIONS=1000" >> $GITHUB_ENV
+            echo "DURATION=900" >> $GITHUB_ENV
+            echo "RPS=500" >> $GITHUB_ENV
+            ;;
+        esac
+
+    - name: Run concurrent authentication load test
+      run: |
+        # Test hardware-backed authentication under load
+        wrk -t12 -c$CONNECTIONS -d${DURATION}s -R$RPS \
+          --script=scripts/auth_load_test.lua \
+          http://localhost:8081/auth/hardware-login > auth_load_${{ matrix.load_scenario }}.txt
+
+    - name: Run multimedia processing load test
+      run: |
+        # Test vision/audio processing under load
+        hey -n 10000 -c $CONNECTIONS -q $RPS \
+          -H "Content-Type: multipart/form-data" \
+          -D scripts/test_image.jpg \
+          http://localhost:8082/multimedia/analyze > multimedia_load_${{ matrix.load_scenario }}.txt
+
+    - name: Run policy evaluation load test
+      run: |
+        # Test policy engine under load
+        ab -n 50000 -c $CONNECTIONS -r \
+          -H "Content-Type: application/json" \
+          -p scripts/policy_payload.json \
+          http://localhost:8083/policy/evaluate > policy_load_${{ matrix.load_scenario }}.txt
+
+    - name: Run attestation load test
+      run: |
+        # Test remote attestation under load
+        drill --benchmark scripts/attestation_drill.yml --stats > attestation_load_${{ matrix.load_scenario }}.txt
+
+    - name: Monitor system resources
+      run: |
+        # Capture system metrics during load test
+        top -b -n 5 > system_metrics_${{ matrix.load_scenario }}.txt
+        free -h >> system_metrics_${{ matrix.load_scenario }}.txt
+        df -h >> system_metrics_${{ matrix.load_scenario }}.txt
+
+    - name: Stop services
+      run: |
+        pkill -f universal-ai-governor || true
+
+    - name: Upload load test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: load-test-results-${{ matrix.load_scenario }}
+        path: |
+          *_load_${{ matrix.load_scenario }}.txt
+          system_metrics_${{ matrix.load_scenario }}.txt
+
+  # IoT/Edge deployment testing
+  iot-edge-tests:
+    name: IoT/Edge Deployment Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+
+    strategy:
+      matrix:
+        platform: [arm64, armv7]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup cross-compilation
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+        
+        rustup target add aarch64-unknown-linux-gnu
+        rustup target add armv7-unknown-linux-gnueabihf
+
+    - name: Configure cross-compilation
+      run: |
+        case "${{ matrix.platform }}" in
+          arm64)
+            echo "TARGET=aarch64-unknown-linux-gnu" >> $GITHUB_ENV
+            echo "LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+            ;;
+          armv7)
+            echo "TARGET=armv7-unknown-linux-gnueabihf" >> $GITHUB_ENV
+            echo "LINKER=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+            ;;
+        esac
+
+    - name: Build for IoT/Edge
+      run: |
+        export CC_${{ env.TARGET }}=${{ env.LINKER }}
+        cargo build --release --target ${{ env.TARGET }} --features "iot-deployment,edge-computing,minimal-footprint"
+
+    - name: Test binary size and dependencies
+      run: |
+        ls -lh target/${{ env.TARGET }}/release/universal-ai-governor
+        file target/${{ env.TARGET }}/release/universal-ai-governor
+        
+        # Check for unwanted dependencies
+        if command -v objdump &> /dev/null; then
+          objdump -p target/${{ env.TARGET }}/release/universal-ai-governor | grep NEEDED || true
+        fi
+
+    - name: Run IoT-specific tests
+      run: |
+        # Cross-compilation tests (can't execute on x86_64)
+        cargo test --target ${{ env.TARGET }} --no-run --features "iot-deployment,edge-computing"
+
+    - name: Upload IoT build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: iot-builds-${{ matrix.platform }}
+        path: target/${{ env.TARGET }}/release/universal-ai-governor
+
+  # Comprehensive report generation
+  generate-multimedia-report:
+    name: Generate Multimedia & Regulatory Report
+    runs-on: ubuntu-latest
+    needs: [vision-attack-tests, audio-attack-tests, gdpr-compliance-tests, hipaa-compliance-tests, black-friday-scale-tests]
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Setup Python for advanced reporting
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install reporting dependencies
+      run: |
+        pip install jinja2 matplotlib seaborn pandas numpy plotly kaleido
+        pip install reportlab fpdf2  # For PDF generation
+
+    - name: Generate multimedia security report
+      run: |
+        python scripts/generate_multimedia_report.py \
+          --vision-results vision-attack-results/ \
+          --audio-results audio-attack-results/ \
+          --output-dir multimedia-reports/
+
+    - name: Generate regulatory compliance report
+      run: |
+        python scripts/generate_regulatory_report.py \
+          --gdpr-results gdpr-compliance-results/ \
+          --hipaa-results hipaa-compliance-results/ \
+          --output-dir regulatory-reports/
+
+    - name: Generate performance analysis
+      run: |
+        python scripts/analyze_scale_performance.py \
+          --load-test-results load-test-results-*/ \
+          --output-dir performance-reports/
+
+    - name: Create executive summary
+      run: |
+        python scripts/create_executive_summary.py \
+          --multimedia-reports multimedia-reports/ \
+          --regulatory-reports regulatory-reports/ \
+          --performance-reports performance-reports/ \
+          --output executive-summary.pdf
+
+    - name: Upload comprehensive reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: comprehensive-reports
+        path: |
+          multimedia-reports/
+          regulatory-reports/
+          performance-reports/
+          executive-summary.pdf
+
+    - name: Update compliance dashboard
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Update compliance status dashboard
+        python scripts/update_compliance_dashboard.py \
+          --reports-dir . \
+          --dashboard-url ${{ secrets.COMPLIANCE_DASHBOARD_URL }}
+
+  # Security compliance notifications
+  compliance-notifications:
+    name: Compliance Notifications
+    runs-on: ubuntu-latest
+    needs: [vision-attack-tests, audio-attack-tests, gdpr-compliance-tests, hipaa-compliance-tests]
+    if: always()
+
+    steps:
+    - name: Evaluate compliance status
+      id: compliance
+      run: |
+        # Determine overall compliance status
+        VISION_STATUS="${{ needs.vision-attack-tests.result }}"
+        AUDIO_STATUS="${{ needs.audio-attack-tests.result }}"
+        GDPR_STATUS="${{ needs.gdpr-compliance-tests.result }}"
+        HIPAA_STATUS="${{ needs.hipaa-compliance-tests.result }}"
+        
+        if [[ "$VISION_STATUS" == "success" && "$AUDIO_STATUS" == "success" && 
+              "$GDPR_STATUS" == "success" && "$HIPAA_STATUS" == "success" ]]; then
+          echo "status=compliant" >> $GITHUB_OUTPUT
+        else
+          echo "status=non-compliant" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Send compliance alert
+      if: steps.compliance.outputs.status == 'non-compliant'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#compliance-alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          🚨 COMPLIANCE ALERT: Regulatory Testing Failures
+          
+          Repository: ${{ github.repository }}
+          Branch: ${{ github.ref }}
+          
+          Test Results:
+          - Vision Attacks: ${{ needs.vision-attack-tests.result }}
+          - Audio Attacks: ${{ needs.audio-attack-tests.result }}
+          - GDPR Compliance: ${{ needs.gdpr-compliance-tests.result }}
+          - HIPAA Compliance: ${{ needs.hipaa-compliance-tests.result }}
+          
+          Immediate compliance review required!
+
+    - name: Create compliance incident
+      if: steps.compliance.outputs.status == 'non-compliant' && github.ref == 'refs/heads/main'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '🚨 COMPLIANCE: Regulatory Testing Failures',
+            body: `## Compliance Incident Report
+            
+            **Incident Type:** Regulatory Compliance Failures
+            **Severity:** Critical
+            **Date:** ${new Date().toISOString()}
+            
+            ### Failed Compliance Tests
+            - Vision Attack Tests: ${{ needs.vision-attack-tests.result }}
+            - Audio Attack Tests: ${{ needs.audio-attack-tests.result }}
+            - GDPR Compliance: ${{ needs.gdpr-compliance-tests.result }}
+            - HIPAA Compliance: ${{ needs.hipaa-compliance-tests.result }}
+            
+            ### Required Actions
+            - [ ] Review failed test results
+            - [ ] Assess regulatory impact
+            - [ ] Implement compliance fixes
+            - [ ] Re-run compliance tests
+            - [ ] Update compliance documentation
+            - [ ] Notify legal/compliance team
+            
+            ### Regulatory Risk
+            Non-compliance may result in:
+            - GDPR fines up to 4% of annual turnover
+            - HIPAA penalties up to $1.5M per incident
+            - Loss of regulatory certifications
+            `,
+            labels: ['compliance', 'critical', 'regulatory', 'incident']
+          });
+
+# Environment variables for multimedia and regulatory testing
+env:
+  # Multimedia processing
+  VISION_PROCESSING_ENABLED: true
+  AUDIO_PROCESSING_ENABLED: true
+  ADVERSARIAL_DETECTION_THRESHOLD: 0.7
+  
+  # Privacy and compliance
+  GDPR_COMPLIANCE_MODE: strict
+  HIPAA_COMPLIANCE_MODE: strict
+  DATA_RETENTION_ENFORCEMENT: true
+  
+  # Performance testing
+  MAX_CONCURRENT_MULTIMEDIA_REQUESTS: 1000
+  LOAD_TEST_DURATION_MINUTES: 15
+  
+  # IoT/Edge deployment
+  IOT_MEMORY_LIMIT_MB: 512
+  EDGE_CPU_LIMIT_PERCENT: 80

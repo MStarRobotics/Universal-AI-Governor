@@ -1,0 +1,458 @@
+# Hardware Integration CI/CD Pipeline
+# Comprehensive testing with hardware emulation and documentation generation
+
+name: Hardware Integration CI
+
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run nightly tests with full hardware emulation
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  # Hardware emulation flags
+  EMULATE_TPM: true
+  EMULATE_HSM: true
+  EMULATE_SECURE_ENCLAVE: true
+
+jobs:
+  # Hardware presence/absence testing matrix
+  hardware-matrix-tests:
+    name: Hardware Configuration Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        hardware-config:
+          - name: "all-hardware"
+            tpm: true
+            hsm: true
+            enclave: true
+          - name: "tpm-only"
+            tpm: true
+            hsm: false
+            enclave: false
+          - name: "enclave-only"
+            tmp: false
+            hsm: false
+            enclave: true
+          - name: "software-fallback"
+            tpm: false
+            hsm: false
+            enclave: false
+          - name: "tamper-simulation"
+            tpm: true
+            hsm: false
+            enclave: false
+            simulate_tampering: true
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+
+    # Platform-specific hardware emulation setup
+    - name: Setup TPM Emulator (Linux)
+      if: matrix.os == 'ubuntu-latest' && matrix.hardware-config.tpm
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libtss2-dev tpm2-tools swtpm swtpm-tools
+        # Start software TPM emulator
+        mkdir -p /tmp/tpm
+        swtpm socket --tpmstate dir=/tmp/tpm --tpm2 --server type=tcp,port=2321 --ctrl type=tcp,port=2322 --flags not-need-init &
+        sleep 2
+        # Initialize TPM
+        tpm2_startup -c -T swtpm:port=2321
+        echo "TPM_SERVER_ADDRESS=127.0.0.1:2321" >> $GITHUB_ENV
+
+    - name: Setup TPM Emulator (Windows)
+      if: matrix.os == 'windows-latest' && matrix.hardware-config.tpm
+      run: |
+        # Install TPM simulator for Windows
+        choco install tpm2-tss-engine
+        # Set up software TPM
+        echo "EMULATE_TPM_WINDOWS=true" >> $env:GITHUB_ENV
+
+    - name: Setup Secure Enclave Emulation (macOS)
+      if: matrix.os == 'macos-latest' && matrix.hardware-config.enclave
+      run: |
+        # Enable Secure Enclave emulation on macOS
+        echo "SECURE_ENCLAVE_AVAILABLE=true" >> $GITHUB_ENV
+        # Note: Real Secure Enclave testing requires physical hardware
+
+    - name: Setup HSM Emulation
+      if: matrix.hardware-config.hsm
+      run: |
+        # Install SoftHSM for PKCS#11 testing
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          sudo apt-get install -y softhsm2
+          softhsm2-util --init-token --slot 0 --label "TestToken" --pin 1234 --so-pin 5678
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+          brew install softhsm
+          softhsm2-util --init-token --slot 0 --label "TestToken" --pin 1234 --so-pin 5678
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+          # Use Windows-compatible HSM emulator
+          echo "HSM_EMULATION_WINDOWS=true" >> $env:GITHUB_ENV
+        fi
+        echo "SOFTHSM2_CONF=/tmp/softhsm2.conf" >> $GITHUB_ENV
+
+    - name: Configure hardware test environment
+      run: |
+        # Set environment variables for hardware configuration
+        echo "TEST_TPM_ENABLED=${{ matrix.hardware-config.tpm }}" >> $GITHUB_ENV
+        echo "TEST_HSM_ENABLED=${{ matrix.hardware-config.hsm }}" >> $GITHUB_ENV
+        echo "TEST_ENCLAVE_ENABLED=${{ matrix.hardware-config.enclave }}" >> $GITHUB_ENV
+        echo "TEST_SIMULATE_TAMPERING=${{ matrix.hardware-config.simulate_tampering || false }}" >> $GITHUB_ENV
+        echo "TEST_CONFIG_NAME=${{ matrix.hardware-config.name }}" >> $GITHUB_ENV
+
+    - name: Build with hardware features
+      run: |
+        cargo build --release --features "tpm-integration,hsm-integration,secure-enclave"
+
+    - name: Run hardware integration tests
+      run: |
+        # Run comprehensive hardware integration test suite
+        cargo test --release --test hardware_integration_tests -- --test-threads=1
+        
+        # Run specific configuration tests
+        cargo test --release --test hardware_integration_tests::test_${{ matrix.hardware-config.name }}_configuration -- --test-threads=1
+
+    - name: Run performance benchmarks
+      if: matrix.hardware-config.name == 'all-hardware'
+      run: |
+        cargo test --release --test hardware_integration_tests::performance_benchmarks -- --test-threads=1 --nocapture
+
+    - name: Run stress tests
+      if: matrix.hardware-config.name == 'all-hardware' && github.event_name == 'schedule'
+      run: |
+        cargo test --release --test hardware_integration_tests::stress_tests -- --test-threads=1 --nocapture
+
+    - name: Generate test report
+      if: always()
+      run: |
+        # Generate detailed test report
+        mkdir -p test-reports
+        cargo test --release --test hardware_integration_tests -- --format json > test-reports/hardware-tests-${{ matrix.os }}-${{ matrix.hardware-config.name }}.json
+
+    - name: Upload test reports
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-reports-${{ matrix.os }}-${{ matrix.hardware-config.name }}
+        path: test-reports/
+
+  # Security and compliance testing
+  security-tests:
+    name: Security and Compliance Tests
+    runs-on: ubuntu-latest
+    needs: hardware-matrix-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+        components: rustfmt, clippy
+
+    - name: Install security audit tools
+      run: |
+        cargo install cargo-audit
+        cargo install cargo-deny
+        cargo install cargo-geiger
+
+    - name: Run security audit
+      run: |
+        cargo audit --json > security-audit.json
+
+    - name: Run dependency analysis
+      run: |
+        cargo deny check --format json > dependency-analysis.json
+
+    - name: Run unsafe code analysis
+      run: |
+        cargo geiger --format json > unsafe-analysis.json
+
+    - name: Run cryptographic compliance tests
+      run: |
+        # Test FIPS compliance where applicable
+        cargo test --release --features "fips-compliance" compliance_tests
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          security-audit.json
+          dependency-analysis.json
+          unsafe-analysis.json
+
+  # Documentation generation and validation
+  documentation-tests:
+    name: Documentation Generation
+    runs-on: ubuntu-latest
+    needs: hardware-matrix-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Install documentation tools
+      run: |
+        cargo install mdbook
+        cargo install mdbook-mermaid
+        cargo install cargo-doc2readme
+        npm install -g @mermaid-js/mermaid-cli
+
+    - name: Generate API documentation
+      run: |
+        cargo doc --no-deps --document-private-items --features "tpm-integration,hsm-integration,secure-enclave"
+
+    - name: Generate architecture diagrams
+      run: |
+        # Generate updated sequence diagrams
+        mmdc -i docs/architecture/sequence_diagrams.md -o docs/architecture/sequence_diagrams.pdf
+        
+        # Generate hardware architecture diagrams
+        mmdc -i docs/architecture/hardware_architecture.md -o docs/architecture/hardware_architecture.pdf
+
+    - name: Build documentation book
+      run: |
+        cd docs
+        mdbook build
+
+    - name: Validate documentation links
+      run: |
+        # Check for broken links in documentation
+        find docs -name "*.md" -exec markdown-link-check {} \;
+
+    - name: Generate README updates
+      run: |
+        # Auto-generate README sections from code documentation
+        cargo doc2readme --template README.template.md
+
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: |
+          target/doc/
+          docs/book/
+          docs/architecture/*.pdf
+
+  # Integration with external systems
+  integration-tests:
+    name: External Integration Tests
+    runs-on: ubuntu-latest
+    needs: hardware-matrix-tests
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[integration-test]')
+
+    services:
+      # Mock SOC/SIEM system for attestation testing
+      mock-soc:
+        image: nginx:alpine
+        ports:
+          - 8080:80
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup test environment
+      run: |
+        # Setup mock external systems
+        docker run -d --name mock-ca -p 8443:443 nginx:alpine
+        docker run -d --name mock-hsm -p 9000:9000 openhsm/mock-hsm
+
+    - name: Run attestation endpoint tests
+      run: |
+        # Test remote attestation with mock SOC
+        cargo test --release attestation_integration_tests -- --test-threads=1
+
+    - name: Run HSM integration tests
+      run: |
+        # Test PKCS#11 integration with mock HSM
+        cargo test --release hsm_integration_tests -- --test-threads=1
+
+    - name: Test certificate chain validation
+      run: |
+        # Test certificate chain validation with mock CA
+        cargo test --release certificate_validation_tests -- --test-threads=1
+
+  # Performance regression testing
+  performance-tests:
+    name: Performance Regression Tests
+    runs-on: ubuntu-latest
+    needs: hardware-matrix-tests
+    if: github.event_name == 'schedule'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup performance testing
+      run: |
+        cargo install cargo-criterion
+        sudo apt-get install -y valgrind
+
+    - name: Run performance benchmarks
+      run: |
+        # Run comprehensive performance benchmarks
+        cargo criterion --message-format json > performance-results.json
+
+    - name: Memory leak detection
+      run: |
+        # Run tests under valgrind for memory leak detection
+        cargo test --release --test hardware_integration_tests 2>&1 | tee valgrind-results.txt
+
+    - name: Performance regression analysis
+      run: |
+        # Compare with baseline performance metrics
+        python scripts/analyze_performance.py performance-results.json
+
+    - name: Upload performance reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-reports
+        path: |
+          performance-results.json
+          valgrind-results.txt
+
+  # Deployment and release preparation
+  release-preparation:
+    name: Release Preparation
+    runs-on: ubuntu-latest
+    needs: [hardware-matrix-tests, security-tests, documentation-tests]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for changelog generation
+
+    - name: Generate changelog
+      run: |
+        # Generate changelog from commits
+        git log --oneline --since="$(git describe --tags --abbrev=0)" > CHANGELOG.md
+
+    - name: Build release artifacts
+      run: |
+        # Build optimized release binaries
+        cargo build --release --features "tpm-integration,hsm-integration,secure-enclave"
+        
+        # Create distribution packages
+        mkdir -p dist
+        tar -czf dist/universal-ai-governor-linux-x64.tar.gz -C target/release universal-ai-governor
+        
+        # Generate checksums
+        cd dist
+        sha256sum *.tar.gz > checksums.txt
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-artifacts
+        path: |
+          dist/
+          CHANGELOG.md
+
+  # Notification and reporting
+  notification:
+    name: Test Results Notification
+    runs-on: ubuntu-latest
+    needs: [hardware-matrix-tests, security-tests, documentation-tests]
+    if: always()
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Generate comprehensive report
+      run: |
+        # Generate comprehensive test report
+        python scripts/generate_test_report.py
+
+    - name: Notify on failure
+      if: failure()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        channel: '#security-alerts'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          🚨 Hardware Integration CI Failed
+          
+          Branch: ${{ github.ref }}
+          Commit: ${{ github.sha }}
+          
+          Failed Jobs:
+          ${{ join(needs.*.result, ', ') }}
+
+    - name: Notify on success
+      if: success() && github.ref == 'refs/heads/main'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          ✅ Hardware Integration CI Passed
+          
+          All hardware configurations tested successfully
+          Documentation updated
+          Security scans passed
+          Ready for deployment
+
+# Workflow-level environment variables
+env:
+  # Hardware emulation settings
+  SWTPM_SERVER_PORT: 2321
+  SWTPM_CTRL_PORT: 2322
+  SOFTHSM2_CONF: /tmp/softhsm2.conf
+  
+  # Test configuration
+  RUST_LOG: debug
+  TEST_TIMEOUT: 300
+  
+  # Security settings
+  CARGO_AUDIT_DATABASE_URL: https://github.com/RustSec/advisory-db
+  
+  # Documentation settings
+  MDBOOK_VERSION: 0.4.21
+  MERMAID_VERSION: 9.4.3

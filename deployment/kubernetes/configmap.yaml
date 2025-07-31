@@ -1,0 +1,229 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-governor-config
+  namespace: ai-governor
+  labels:
+    app.kubernetes.io/name: universal-ai-governor
+    app.kubernetes.io/component: config
+data:
+  config.yaml: |
+    server:
+      mode: "production"
+      read_timeout: 30
+      write_timeout: 30
+      idle_timeout: 120
+      cors:
+        enabled: true
+        allowed_origins: ["*"]
+        allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        allowed_headers: ["*"]
+      rate_limit:
+        enabled: true
+        requests_per_minute: 1000
+        burst_size: 100
+        cleanup_interval: "5m"
+
+    governance:
+      policy_engine:
+        type: "opa"
+        policy_dir: "/app/policies"
+        data_dir: "/app/data"
+        bundle_mode: false
+
+      moderation:
+        enabled: true
+        fallback: "allow"
+        timeout: "10s"
+        providers:
+          - name: "local"
+            type: "local"
+            enabled: true
+            priority: 1
+            config:
+              model_path: "/app/models/moderation"
+              threshold: 0.8
+
+      llm_adapters:
+        - name: "ollama"
+          type: "ollama"
+          enabled: true
+          config:
+            base_url: "http://ollama-service:11434"
+            default_model: "llama2"
+            timeout: "60s"
+            keep_alive: "5m"
+
+      guardrails:
+        enabled: true
+        schema_validation: true
+        input_filters:
+          - name: "length_check"
+            type: "length"
+            enabled: true
+            config:
+              min_length: 1
+              max_length: 10000
+          - name: "pii_detection"
+            type: "pii"
+            enabled: true
+            config:
+              patterns: ["email", "phone", "ssn", "credit_card"]
+
+      audit:
+        enabled: true
+        log_level: "info"
+        retention_days: 90
+        destinations:
+          - type: "file"
+            config:
+              path: "/app/logs/audit.jsonl"
+              rotate: true
+              max_size: "100MB"
+              max_files: 10
+          - type: "elasticsearch"
+            config:
+              enabled: true
+              hosts: ["http://elasticsearch-service:9200"]
+              index: "ai-governor-audit"
+
+    security:
+      tls:
+        enabled: true
+        cert_file: "/app/certs/tls.crt"
+        key_file: "/app/certs/tls.key"
+        min_version: "1.2"
+      auth:
+        enabled: true
+        type: "jwt"
+        config:
+          secret: "${JWT_SECRET}"
+          expiry: "24h"
+          issuer: "universal-ai-governor"
+
+    logging:
+      level: "info"
+      format: "json"
+      output: ["stdout"]
+      structured: true
+
+    storage:
+      type: "postgres"
+      config:
+        postgres_host: "postgres-service"
+        postgres_port: 5432
+        postgres_db: "governor"
+        postgres_user: "governor"
+        postgres_password: "${POSTGRES_PASSWORD}"
+        postgres_sslmode: "require"
+
+    monitoring:
+      enabled: true
+      prometheus:
+        enabled: true
+        path: "/metrics"
+        port: 9090
+      health:
+        enabled: true
+        path: "/health"
+        detailed: true
+      tracing:
+        enabled: true
+        provider: "jaeger"
+        endpoint: "http://jaeger-collector:14268/api/traces"
+        service_name: "universal-ai-governor"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ai-governor-policies
+  namespace: ai-governor
+  labels:
+    app.kubernetes.io/name: universal-ai-governor
+    app.kubernetes.io/component: policies
+data:
+  base.rego: |
+    package governor.base
+
+    import rego.v1
+
+    default allow := true
+    default reason := ""
+
+    # Block requests that are too long
+    allow := false if {
+        count(input.prompt) > 10000
+    }
+
+    reason := "Prompt exceeds maximum length" if {
+        count(input.prompt) > 10000
+    }
+
+    # Block suspicious patterns
+    suspicious_patterns := [
+        "ignore previous instructions",
+        "disregard safety guidelines",
+        "bypass restrictions",
+        "jailbreak",
+        "prompt injection"
+    ]
+
+    allow := false if {
+        some pattern in suspicious_patterns
+        contains(lower(input.prompt), pattern)
+    }
+
+    reason := sprintf("Suspicious pattern detected: %s", [pattern]) if {
+        some pattern in suspicious_patterns
+        contains(lower(input.prompt), pattern)
+    }
+
+    # Rate limiting per user
+    allow := false if {
+        user_request_count := data.users[input.user_id].request_count
+        user_request_count > 1000
+    }
+
+    reason := "Rate limit exceeded for user" if {
+        user_request_count := data.users[input.user_id].request_count
+        user_request_count > 1000
+    }
+
+  production.rego: |
+    package governor.production
+
+    import rego.v1
+
+    default allow := true
+    default reason := ""
+
+    # Production-specific policies
+    allow := false if {
+        input.context.environment == "production"
+        contains(input.prompt, "debug")
+    }
+
+    reason := "Debug commands not allowed in production" if {
+        input.context.environment == "production"
+        contains(input.prompt, "debug")
+    }
+
+    # Stricter content filtering for production
+    restricted_content := [
+        "violence",
+        "hate_speech",
+        "adult_content",
+        "illegal_activities",
+        "self_harm"
+    ]
+
+    allow := false if {
+        some category in restricted_content
+        category in input.context.categories
+    }
+
+    reason := sprintf("Content category not allowed in production: %s", [category]) if {
+        some category in restricted_content
+        category in input.context.categories
+    }

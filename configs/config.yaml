@@ -1,0 +1,319 @@
+# Universal AI Governor Configuration
+# This configuration supports deployment across any OS and device
+
+server:
+  mode: "development"  # development, production
+  read_timeout: 30
+  write_timeout: 30
+  idle_timeout: 120
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowed_headers: ["*"]
+  rate_limit:
+    enabled: true
+    requests_per_minute: 100
+    burst_size: 10
+    cleanup_interval: "5m"
+
+governance:
+  policy_engine:
+    type: "opa"
+    policy_dir: "./policies"
+    data_dir: "./data"
+    bundle_mode: false
+    bundle_url: ""
+    plugins: {}
+
+  moderation:
+    enabled: true
+    fallback: "allow"  # allow, block
+    timeout: "10s"
+    providers:
+      - name: "openai"
+        type: "openai"
+        enabled: false
+        priority: 1
+        config:
+          api_key: "${OPENAI_API_KEY}"
+          model: "text-moderation-latest"
+          endpoint: "https://api.openai.com/v1/moderations"
+      
+      - name: "cohere"
+        type: "cohere"
+        enabled: false
+        priority: 2
+        config:
+          api_key: "${COHERE_API_KEY}"
+          endpoint: "https://api.cohere.ai/v1/classify"
+      
+      - name: "huggingface"
+        type: "huggingface"
+        enabled: true
+        priority: 3
+        config:
+          model: "unitary/toxic-bert"
+          device: "cpu"  # cpu, cuda, mps
+          threshold: 0.7
+      
+      - name: "local"
+        type: "local"
+        enabled: true
+        priority: 4
+        config:
+          model_path: "./models/moderation"
+          threshold: 0.8
+
+  llm_adapters:
+    - name: "openai"
+      type: "openai"
+      enabled: false
+      config:
+        api_key: "${OPENAI_API_KEY}"
+        base_url: "https://api.openai.com/v1"
+        default_model: "gpt-3.5-turbo"
+        timeout: "30s"
+        max_tokens: 2048
+    
+    - name: "anthropic"
+      type: "anthropic"
+      enabled: false
+      config:
+        api_key: "${ANTHROPIC_API_KEY}"
+        base_url: "https://api.anthropic.com"
+        default_model: "claude-3-sonnet-20240229"
+        timeout: "30s"
+        max_tokens: 2048
+    
+    - name: "ollama"
+      type: "ollama"
+      enabled: true
+      config:
+        base_url: "http://localhost:11434"
+        default_model: "llama2"
+        timeout: "60s"
+        keep_alive: "5m"
+    
+    - name: "local"
+      type: "local"
+      enabled: true
+      config:
+        model_path: "./models/llama-2-7b-chat.gguf"
+        context_length: 4096
+        threads: 4
+        gpu_layers: 0
+
+  guardrails:
+    enabled: true
+    schema_validation: true
+    input_filters:
+      - name: "length_check"
+        type: "length"
+        enabled: true
+        config:
+          min_length: 1
+          max_length: 10000
+      
+      - name: "pii_detection"
+        type: "pii"
+        enabled: true
+        config:
+          patterns:
+            - "email"
+            - "phone"
+            - "ssn"
+            - "credit_card"
+      
+      - name: "profanity_filter"
+        type: "profanity"
+        enabled: true
+        config:
+          wordlist_path: "./data/profanity.txt"
+          action: "block"  # block, mask, warn
+      
+      - name: "regex_filter"
+        type: "regex"
+        enabled: true
+        config:
+          patterns:
+            - pattern: "\\b(?:password|secret|key)\\s*[:=]\\s*\\S+"
+              action: "block"
+              message: "Potential credential detected"
+    
+    output_filters:
+      - name: "length_check"
+        type: "length"
+        enabled: true
+        config:
+          max_length: 50000
+      
+      - name: "json_validation"
+        type: "json"
+        enabled: false
+        config:
+          schema_path: "./schemas/response.json"
+      
+      - name: "content_safety"
+        type: "content"
+        enabled: true
+        config:
+          check_harmful: true
+          check_bias: true
+          check_factuality: false
+
+  audit:
+    enabled: true
+    log_level: "info"
+    retention_days: 90
+    destinations:
+      - type: "file"
+        config:
+          path: "./logs/audit.jsonl"
+          rotate: true
+          max_size: "100MB"
+          max_files: 10
+      
+      - type: "elasticsearch"
+        config:
+          enabled: false
+          hosts: ["http://localhost:9200"]
+          index: "ai-governor-audit"
+          username: ""
+          password: ""
+      
+      - type: "webhook"
+        config:
+          enabled: false
+          url: "https://your-webhook-endpoint.com/audit"
+          headers:
+            Authorization: "Bearer ${WEBHOOK_TOKEN}"
+    
+    sampling:
+      enabled: false
+      rate: 0.1
+      max_per_second: 100
+
+security:
+  tls:
+    enabled: false
+    cert_file: "./certs/server.crt"
+    key_file: "./certs/server.key"
+    min_version: "1.2"
+  
+  auth:
+    enabled: false
+    type: "jwt"  # jwt, oauth2, apikey
+    config:
+      secret: "${JWT_SECRET}"
+      expiry: "24h"
+      issuer: "universal-ai-governor"
+    rbac:
+      enabled: false
+      roles:
+        admin:
+          permissions: ["*"]
+          resources: ["*"]
+        user:
+          permissions: ["read", "process"]
+          resources: ["governance", "llm"]
+        viewer:
+          permissions: ["read"]
+          resources: ["metrics", "health"]
+
+logging:
+  level: "info"  # debug, info, warn, error, fatal
+  format: "json"  # json, text
+  output: ["stdout"]  # stdout, stderr, file
+  structured: true
+  file:
+    path: "./logs/governor.log"
+    max_size: 100  # MB
+    max_backups: 3
+    max_age: 28  # days
+    compress: true
+
+storage:
+  type: "file"  # file, sqlite, postgres, redis
+  config:
+    # File storage
+    data_dir: "./data"
+    
+    # SQLite storage
+    sqlite_path: "./data/governor.db"
+    
+    # PostgreSQL storage
+    postgres_host: "localhost"
+    postgres_port: 5432
+    postgres_db: "governor"
+    postgres_user: "governor"
+    postgres_password: "${POSTGRES_PASSWORD}"
+    postgres_sslmode: "disable"
+    
+    # Redis storage
+    redis_host: "localhost"
+    redis_port: 6379
+    redis_password: "${REDIS_PASSWORD}"
+    redis_db: 0
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    path: "/metrics"
+    port: 9090
+  health:
+    enabled: true
+    path: "/health"
+    detailed: true
+  tracing:
+    enabled: false
+    provider: "jaeger"  # jaeger, zipkin, otlp
+    endpoint: "http://localhost:14268/api/traces"
+    service_name: "universal-ai-governor"
+
+# Environment-specific overrides
+environments:
+  development:
+    server:
+      mode: "development"
+    logging:
+      level: "debug"
+    governance:
+      audit:
+        log_level: "debug"
+  
+  production:
+    server:
+      mode: "production"
+    logging:
+      level: "info"
+      output: ["file"]
+    security:
+      tls:
+        enabled: true
+      auth:
+        enabled: true
+    monitoring:
+      tracing:
+        enabled: true
+  
+  edge:
+    # Optimized for edge/IoT devices
+    governance:
+      moderation:
+        providers:
+          - name: "local"
+            type: "local"
+            enabled: true
+      llm_adapters:
+        - name: "local"
+          type: "local"
+          enabled: true
+    storage:
+      type: "sqlite"
+    monitoring:
+      prometheus:
+        enabled: false
+      tracing:
+        enabled: false

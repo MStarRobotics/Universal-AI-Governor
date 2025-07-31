@@ -1,0 +1,76 @@
+# Universal AI Governor - Default Configuration
+# This is the default configuration file for development and testing
+
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 4
+max_connections = 1000
+request_timeout_seconds = 30
+keep_alive_seconds = 60
+tls_enabled = false
+# tls_cert_path = "/path/to/cert.pem"
+# tls_key_path = "/path/to/key.pem"
+
+[hardware]
+tmp_enabled = false  # Enable for production with TPM hardware
+tpm_device_path = "/dev/tpm0"
+hsm_enabled = false  # Enable for production with HSM hardware
+# hsm_library_path = "/usr/lib/libpkcs11.so"
+secure_enclave_enabled = false  # Auto-detected on macOS
+pcr_binding_enabled = true
+hardware_attestation_required = false
+fallback_to_software = true
+
+[ai_synthesis]
+enabled = false  # Enable when LLM model is available
+llm_model_path = "./models/policy_generator.gguf"
+confidence_threshold = 0.8
+auto_deploy_enabled = false
+human_approval_required = true
+max_incident_history = 1000
+learning_rate = 0.1
+rule_retirement_days = 90
+
+[database]
+url = "sqlite://./data/governor.db"
+max_connections = 10
+connection_timeout_seconds = 30
+idle_timeout_seconds = 600
+# redis_url = "redis://localhost:6379"
+redis_cluster_mode = false
+
+[logging]
+level = "info"
+format = "json"
+file_path = "./logs/governor.log"
+max_file_size_mb = 100
+max_files = 10
+structured_logging = true
+
+[security]
+jwt_secret = "development-secret-change-in-production-this-must-be-at-least-32-characters-long"
+jwt_expiry_hours = 24
+password_min_length = 12
+password_require_special = true
+session_timeout_minutes = 480
+max_login_attempts = 5
+lockout_duration_minutes = 15
+rate_limit_requests_per_minute = 100
+
+[compliance]
+gdpr_enabled = false
+hipaa_enabled = false
+soc2_enabled = false
+data_retention_days = 365
+audit_log_retention_days = 2555  # 7 years
+encryption_at_rest = true
+encryption_in_transit = true
+
+# Legacy configuration for backward compatibility
+offline_mode = false
+challenge_expiry_seconds = 300
+max_failed_attempts = 3
+lockout_duration_seconds = 900
+post_quantum_enabled = false
+audit_level = "Standard"

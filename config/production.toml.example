@@ -1,0 +1,77 @@
+# Universal AI Governor - Production Configuration Example
+# Copy this file to production.toml and customize for your environment
+# IMPORTANT: Never commit production.toml to version control
+
+[server]
+host = "0.0.0.0"
+port = 8080
+workers = 8  # Adjust based on CPU cores
+max_connections = 5000
+request_timeout_seconds = 30
+keep_alive_seconds = 60
+tls_enabled = true
+tls_cert_path = "/etc/ssl/certs/governor.crt"
+tls_key_path = "/etc/ssl/private/governor.key"
+
+[hardware]
+tmp_enabled = true  # Enable in production with TPM hardware
+tmp_device_path = "/dev/tpm0"
+hsm_enabled = true  # Enable if HSM is available
+hsm_library_path = "/usr/lib/softhsm/libsofthsm2.so"
+secure_enclave_enabled = true  # Auto-detected on macOS
+pcr_binding_enabled = true
+hardware_attestation_required = true
+fallback_to_software = false  # Strict hardware requirement
+
+[ai_synthesis]
+enabled = true
+llm_model_path = "/opt/models/policy_generator.gguf"
+confidence_threshold = 0.9  # Higher threshold for production
+auto_deploy_enabled = false  # Require human approval
+human_approval_required = true
+max_incident_history = 10000
+learning_rate = 0.05  # Conservative learning rate
+rule_retirement_days = 180  # 6 months
+
+[database]
+url = "postgresql://governor:CHANGE_PASSWORD@localhost:5432/universal_ai_governor"
+max_connections = 50
+connection_timeout_seconds = 30
+idle_timeout_seconds = 300
+redis_url = "redis://localhost:6379"
+redis_cluster_mode = false
+
+[logging]
+level = "warn"  # Reduce log verbosity in production
+format = "json"
+file_path = "/var/log/universal-ai-governor/governor.log"
+max_file_size_mb = 500
+max_files = 50
+structured_logging = true
+
+[security]
+jwt_secret = "CHANGE_THIS_TO_A_SECURE_RANDOM_STRING_AT_LEAST_64_CHARACTERS_LONG_FOR_PRODUCTION"
+jwt_expiry_hours = 8  # Shorter expiry for production
+password_min_length = 16
+password_require_special = true
+session_timeout_minutes = 240  # 4 hours
+max_login_attempts = 3
+lockout_duration_minutes = 30
+rate_limit_requests_per_minute = 50  # Stricter rate limiting
+
+[compliance]
+gdpr_enabled = true
+hipaa_enabled = true  # Enable if handling health data
+soc2_enabled = true
+data_retention_days = 2555  # 7 years
+audit_log_retention_days = 3650  # 10 years
+encryption_at_rest = true
+encryption_in_transit = true
+
+# Legacy configuration
+offline_mode = false
+challenge_expiry_seconds = 180  # Shorter expiry
+max_failed_attempts = 3
+lockout_duration_seconds = 1800  # 30 minutes
+post_quantum_enabled = true  # Enable for future-proofing
+audit_level = "Comprehensive"

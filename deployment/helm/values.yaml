@@ -1,0 +1,455 @@
+# Universal AI Governor Helm Chart Values
+# This file contains the default configuration values for the Universal AI Governor Helm chart.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: universal-ai-governor
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+# Deployment configuration
+replicaCount: 3
+
+# Update strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Pod configuration
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+    - ALL
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: http
+  annotations: {}
+  labels: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: ai-governor.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+    # - secretName: ai-governor-tls
+    #   hosts:
+    #     - ai-governor.local
+
+# Resource configuration
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 250m
+    memory: 512Mi
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Node selection
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - universal-ai-governor
+        topologyKey: kubernetes.io/hostname
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC
+rbac:
+  create: true
+
+# Network Policy
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+  # maxUnavailable: 1
+
+# Persistence
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# Configuration
+config:
+  # Server configuration
+  server:
+    mode: production
+    readTimeout: 30
+    writeTimeout: 30
+    idleTimeout: 120
+    cors:
+      enabled: true
+      allowedOrigins: ["*"]
+      allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowedHeaders: ["*"]
+    rateLimit:
+      enabled: true
+      requestsPerMinute: 1000
+      burstSize: 100
+      cleanupInterval: "5m"
+
+  # Governance configuration
+  governance:
+    policyEngine:
+      type: "opa"
+      policyDir: "/app/policies"
+      dataDir: "/app/data"
+      bundleMode: false
+
+    moderation:
+      enabled: true
+      fallback: "allow"
+      timeout: "10s"
+      providers:
+        - name: "local"
+          type: "local"
+          enabled: true
+          priority: 1
+          config:
+            modelPath: "/app/models/moderation"
+            threshold: 0.8
+
+    llmAdapters:
+      - name: "ollama"
+        type: "ollama"
+        enabled: true
+        config:
+          baseUrl: "http://ollama-service:11434"
+          defaultModel: "llama2"
+          timeout: "60s"
+          keepAlive: "5m"
+
+    guardrails:
+      enabled: true
+      schemaValidation: true
+      inputFilters:
+        - name: "length_check"
+          type: "length"
+          enabled: true
+          config:
+            minLength: 1
+            maxLength: 10000
+        - name: "pii_detection"
+          type: "pii"
+          enabled: true
+          config:
+            patterns: ["email", "phone", "ssn", "credit_card"]
+
+    audit:
+      enabled: true
+      logLevel: "info"
+      retentionDays: 90
+      destinations:
+        - type: "file"
+          config:
+            path: "/app/logs/audit.jsonl"
+            rotate: true
+            maxSize: "100MB"
+            maxFiles: 10
+
+  # Security configuration
+  security:
+    tls:
+      enabled: true
+      certFile: "/app/certs/tls.crt"
+      keyFile: "/app/certs/tls.key"
+      minVersion: "1.2"
+    auth:
+      enabled: true
+      type: "jwt"
+      config:
+        expiry: "24h"
+        issuer: "universal-ai-governor"
+
+  # Logging configuration
+  logging:
+    level: "info"
+    format: "json"
+    output: ["stdout"]
+    structured: true
+
+  # Storage configuration
+  storage:
+    type: "postgres"
+
+  # Monitoring configuration
+  monitoring:
+    enabled: true
+    prometheus:
+      enabled: true
+      path: "/metrics"
+      port: 9090
+    health:
+      enabled: true
+      path: "/health"
+      detailed: true
+    tracing:
+      enabled: true
+      provider: "jaeger"
+      serviceName: "universal-ai-governor"
+
+# Secrets configuration
+secrets:
+  # JWT secret for authentication
+  jwtSecret: ""
+  # Database passwords
+  postgresPassword: ""
+  redisPassword: ""
+  # API keys for external services
+  openaiApiKey: ""
+  anthropicApiKey: ""
+  cohereApiKey: ""
+
+# TLS configuration
+tls:
+  enabled: true
+  # Existing secret name containing tls.crt and tls.key
+  secretName: ""
+  # Certificate and key (if secretName is not provided)
+  cert: ""
+  key: ""
+
+# External dependencies configuration
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: ""
+    username: "governor"
+    password: ""
+    database: "governor"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 1000m
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: ""
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+# Elasticsearch configuration
+elasticsearch:
+  enabled: false
+  clusterName: "ai-governor-es"
+  nodeGroup: "master"
+  masterService: "ai-governor-es"
+  replicas: 3
+  minimumMasterNodes: 2
+  esMajorVersion: ""
+  esConfig:
+    elasticsearch.yml: |
+      cluster.name: "ai-governor-es"
+      network.host: 0.0.0.0
+      discovery.seed_hosts: "ai-governor-es-headless"
+      cluster.initial_master_nodes: "ai-governor-es-0,ai-governor-es-1,ai-governor-es-2"
+  volumeClaimTemplate:
+    accessModes: ["ReadWriteOnce"]
+    storageClassName: ""
+    resources:
+      requests:
+        storage: 30Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512M"
+    limits:
+      cpu: "1000m"
+      memory: "2G"
+
+# Monitoring configuration
+monitoring:
+  # Prometheus
+  prometheus:
+    enabled: false
+    server:
+      persistentVolume:
+        enabled: true
+        size: 20Gi
+    alertmanager:
+      enabled: true
+      persistentVolume:
+        enabled: true
+        size: 2Gi
+
+  # Grafana
+  grafana:
+    enabled: false
+    persistence:
+      enabled: true
+      size: 10Gi
+    adminPassword: "admin"
+    dashboards:
+      default:
+        ai-governor:
+          gnetId: 1860
+          revision: 27
+          datasource: Prometheus
+
+# Ollama configuration (for local LLM)
+ollama:
+  enabled: false
+  image:
+    repository: ollama/ollama
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 11434
+  persistence:
+    enabled: true
+    size: 50Gi
+  resources:
+    requests:
+      memory: 4Gi
+      cpu: 1000m
+    limits:
+      memory: 8Gi
+      cpu: 4000m
+  # GPU support
+  gpu:
+    enabled: false
+    count: 1
+
+# Jaeger configuration (for tracing)
+jaeger:
+  enabled: false
+  collector:
+    service:
+      type: ClusterIP
+      port: 14268
+  query:
+    service:
+      type: ClusterIP
+      port: 16686
+
+# Init containers
+initContainers: []
+
+# Sidecar containers
+sidecars: []
+
+# Extra volumes
+extraVolumes: []
+
+# Extra volume mounts
+extraVolumeMounts: []
+
+# Extra environment variables
+extraEnvVars: []
+
+# Extra environment variables from ConfigMaps or Secrets
+extraEnvVarsSecret: ""
+extraEnvVarsConfigMap: ""
+
+# Lifecycle hooks
+lifecycleHooks: {}
+
+# Custom startup, liveness, and readiness probes
+customStartupProbe: {}
+customLivenessProbe: {}
+customReadinessProbe: {}
+
+# Pod priority
+priorityClassName: ""
+
+# Runtime class
+runtimeClassName: ""
+
+# Topology spread constraints
+topologySpreadConstraints: []
+
+# Pod management policy
+podManagementPolicy: Parallel
+
+# Termination grace period
+terminationGracePeriodSeconds: 30

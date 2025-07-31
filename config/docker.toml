@@ -1,0 +1,215 @@
+# Universal AI Governor - Docker Configuration
+# Optimized for containerized deployment
+
+[server]
+host = "0.0.0.0"
+port = 8080
+https_port = 8443
+workers = 4
+max_connections = 1000
+request_timeout = 30
+keep_alive = 75
+
+[server.tls]
+enabled = true
+cert_file = "/app/certs/server.crt"
+key_file = "/app/certs/server.key"
+min_version = "1.3"
+
+[database]
+url = "postgresql://uag_user:uag_password@postgres:5432/universal_ai_governor"
+max_connections = 20
+min_connections = 5
+connection_timeout = 30
+idle_timeout = 600
+max_lifetime = 3600
+
+[redis]
+url = "redis://:redis_password@redis:6379"
+pool_size = 10
+connection_timeout = 5
+command_timeout = 10
+
+[security]
+jwt_secret = "${UAG_JWT_SECRET:-docker-jwt-secret-change-in-production}"
+session_timeout = 3600
+max_failed_attempts = 5
+lockout_duration = 900
+tpm_required = false
+hardware_backed_auth = false
+secure_enclave_enabled = false
+
+[security.encryption]
+algorithm = "AES-256-GCM"
+key_derivation = "PBKDF2"
+iterations = 100000
+
+[ai_synthesis]
+enabled = false
+model_path = "/app/models/policy_generator.gguf"
+confidence_threshold = 0.8
+max_tokens = 2048
+temperature = 0.7
+auto_deploy = false
+
+[multimedia]
+max_file_size = 104857600  # 100MB
+supported_formats = ["jpg", "jpeg", "png", "gif", "mp4", "avi", "wav", "mp3"]
+processing_timeout = 30
+
+[multimedia.image]
+max_width = 4096
+max_height = 4096
+quality = 85
+
+[multimedia.video]
+max_duration = 300  # 5 minutes
+max_bitrate = 10000000  # 10 Mbps
+
+[multimedia.audio]
+max_duration = 600  # 10 minutes
+sample_rate = 44100
+
+[policy]
+cache_size = 10000
+cache_ttl = 3600
+evaluation_timeout = 5
+max_policy_size = 1048576  # 1MB
+
+[audit]
+enabled = true
+level = "standard"
+retention_days = 365
+batch_size = 1000
+flush_interval = 60
+
+[audit.database]
+table_name = "audit_logs"
+partition_by = "month"
+compression = true
+
+[compliance]
+gdpr_enabled = true
+hipaa_enabled = false
+soc2_enabled = true
+data_retention_days = 365
+anonymization_enabled = true
+
+[compliance.gdpr]
+consent_required = true
+right_to_erasure = true
+data_portability = true
+breach_notification = true
+
+[logging]
+level = "info"
+format = "json"
+file = "/app/logs/governor.log"
+max_size = "100MB"
+max_files = 10
+compress = true
+
+[logging.components]
+core = "info"
+security = "info"
+policy = "info"
+audit = "info"
+api = "info"
+hardware = "warn"
+
+[metrics]
+enabled = true
+endpoint = "/metrics"
+namespace = "uag"
+subsystem = "governor"
+
+[metrics.prometheus]
+host = "0.0.0.0"
+port = 9090
+path = "/metrics"
+
+[tracing]
+enabled = true
+service_name = "universal-ai-governor"
+jaeger_endpoint = "http://jaeger:14268/api/traces"
+sample_rate = 0.1
+
+[health]
+enabled = true
+endpoint = "/health"
+detailed_endpoint = "/health/detailed"
+timeout = 10
+
+[rate_limiting]
+enabled = true
+requests_per_minute = 1000
+burst_size = 100
+cleanup_interval = 60
+
+[rate_limiting.per_ip]
+requests_per_minute = 100
+burst_size = 20
+
+[rate_limiting.per_user]
+requests_per_minute = 500
+burst_size = 50
+
+[cache]
+enabled = true
+default_ttl = 3600
+max_size = "512MB"
+eviction_policy = "lru"
+
+[cache.policy]
+ttl = 7200
+max_entries = 10000
+
+[cache.session]
+ttl = 3600
+max_entries = 50000
+
+[cache.result]
+ttl = 1800
+max_entries = 100000
+
+[monitoring]
+enabled = true
+interval = 30
+metrics_retention = "7d"
+
+[monitoring.alerts]
+enabled = true
+webhook_url = "${UAG_ALERT_WEBHOOK}"
+severity_threshold = "warning"
+
+[backup]
+enabled = true
+interval = "24h"
+retention = "30d"
+storage_path = "/app/data/backups"
+compression = true
+
+[backup.s3]
+enabled = false
+bucket = "${UAG_BACKUP_BUCKET}"
+region = "${UAG_BACKUP_REGION}"
+access_key = "${UAG_BACKUP_ACCESS_KEY}"
+secret_key = "${UAG_BACKUP_SECRET_KEY}"
+
+[development]
+debug_mode = false
+hot_reload = false
+mock_hardware = true
+test_data_enabled = false
+
+[performance]
+max_concurrent_requests = 10000
+request_queue_size = 50000
+worker_threads = 4
+blocking_threads = 512
+
+[performance.timeouts]
+request = 30
+database = 10
+cache = 5
+external_api = 15

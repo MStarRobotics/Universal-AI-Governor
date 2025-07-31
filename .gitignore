@@ -1,0 +1,131 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo lock file (uncomment if this is a library)
+# Cargo.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs and runtime data
+logs/
+*.log
+data/
+tmp/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output
+tarpaulin-report.html
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Security sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+private/
+certs/*.key
+certs/*.pem
+
+# AI models (these are usually too big for git)
+models/*.gguf
+models/*.bin
+models/*.onnx
+models/*.pt
+models/*.safetensors
+
+# Cache directories
+.cache/
+.cargo-cache/
+
+# Local development stuff
+local/
+dev/
+scratch/
+
+# Docker stuff
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated documentation
+/target/doc/
+
+# Benchmark results
+/target/criterion/
+
+# Profiling data
+*.prof
+perf.data*
+
+# Editor backup files
+*~
+.#*
+\#*#
+
+# Local configuration overrides
+config/local.toml
+config/development.local.toml
+config/production.local.toml
+
+# Test artifacts
+test-data/
+test-logs/
+test-reports/
+test-coverage/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Package files
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+
+# Kubernetes secrets
+k8s/secrets.yaml
+k8s/local-*.yaml
