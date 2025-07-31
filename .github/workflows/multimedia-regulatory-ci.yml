@@ -20,6 +20,18 @@ on:
         type: choice
         options:
         - all
+        - multimedia
+        - regulatory
+        - privacy
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  checks: write
+  pull-requests: write
+        options:
+        - all
         - vision_attacks
         - audio_attacks
         - gdpr_compliance
@@ -41,6 +53,9 @@ jobs:
     name: Vision Model Attack Tests
     runs-on: ubuntu-latest
     if: github.event.inputs.test_suite == 'all' || github.event.inputs.test_suite == 'vision_attacks' || github.event.inputs.test_suite == ''
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
     - name: Checkout code

@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/gin-gonic/gin v1.9.1
-	github.com/open-policy-agent/opa v0.61.0
+	github.com/open-policy-agent/opa v0.62.1
 	github.com/prometheus/client_golang v1.17.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
@@ -22,10 +22,10 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
-	golang.org/x/crypto v0.19.0
-	golang.org/x/net v0.21.0
+	golang.org/x/crypto v0.21.0
+	golang.org/x/net v0.23.0
 	golang.org/x/time v0.5.0
-	github.com/gin-contrib/cors v1.6.0
+	github.com/gin-contrib/cors v1.7.0
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-contrib/requestid v0.0.6
 	github.com/gin-contrib/secure v0.0.1
