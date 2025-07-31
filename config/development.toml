@@ -1,0 +1,22 @@
+# Development configuration for Universal AI Governor
+
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[database]
+url = "sqlite://governor.db"
+max_connections = 5
+
+[security]
+enable_tpm = false
+enable_hsm = false
+
+[logging]
+level = "debug"
+format = "pretty"
+
+[features]
+enable_metrics = true
+enable_tracing = true
+enable_audit = true

@@ -7,8 +7,12 @@
   "scripts": {
     "build": "tsc",
     "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
-    "dev": "tsc --watch"
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "ai",
@@ -19,21 +23,28 @@
   "author": "Sourav Rajak <morningstar.xcd@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.0"
+    "axios": "^1.6.8"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
-    "eslint": "^8.0.0",
-    "jest": "^29.0.0",
-    "typescript": "^5.0.0"
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "@typescript-eslint/eslint-plugin": "^7.7.0",
+    "@typescript-eslint/parser": "^7.7.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.5"
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "README.md"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/MStarRobotics/Universal-AI-Governor.git"
-  }
+  },
+  "bugs": {
+    "url": "https://github.com/MStarRobotics/Universal-AI-Governor/issues"
+  },
+  "homepage": "https://github.com/MStarRobotics/Universal-AI-Governor#readme"
 }

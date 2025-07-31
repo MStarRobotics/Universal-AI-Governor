@@ -1,0 +1,22 @@
+# Production configuration for Universal AI Governor
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[database]
+url = "postgres://governor:password@localhost:5432/governor"
+max_connections = 20
+
+[security]
+enable_tpm = true
+enable_hsm = true
+
+[logging]
+level = "info"
+format = "json"
+
+[features]
+enable_metrics = true
+enable_tracing = true
+enable_audit = true
