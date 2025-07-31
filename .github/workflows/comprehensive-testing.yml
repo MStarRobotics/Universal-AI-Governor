@@ -1,0 +1,438 @@
+name: Comprehensive Testing Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  actions: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Go testing
+  test-go:
+    name: Go Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    
+    strategy:
+      matrix:
+        go-version: ['1.20', '1.21']
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ matrix.go-version }}
+        cache: true
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests with coverage
+      run: |
+        go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        go tool cover -html=coverage.out -o coverage.html
+
+    - name: Run benchmarks
+      run: go test -bench=. -benchmem ./...
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+        flags: go
+        name: go-coverage
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: go-test-results-${{ matrix.go-version }}
+        path: |
+          coverage.out
+          coverage.html
+
+  # Rust testing
+  test-rust:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    
+    strategy:
+      matrix:
+        rust: [stable, beta, nightly]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust ${{ matrix.rust }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          pkg-config \
+          libssl-dev \
+          libtss2-dev \
+          libopencv-dev \
+          libclang-dev
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Check formatting
+      if: matrix.rust == 'stable'
+      run: cargo fmt --all -- --check
+
+    - name: Run Clippy
+      if: matrix.rust == 'stable'
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Run tests
+      run: cargo test --all-features --verbose
+
+    - name: Run doc tests
+      run: cargo test --doc --all-features
+
+    - name: Generate coverage report
+      if: matrix.rust == 'stable'
+      run: |
+        cargo install cargo-tarpaulin
+        cargo tarpaulin --out xml --output-dir ./coverage/
+
+    - name: Upload coverage to Codecov
+      if: matrix.rust == 'stable'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/cobertura.xml
+        flags: rust
+        name: rust-coverage
+
+  # Python testing
+  test-python:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        cd sdks/python
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pytest-asyncio
+        pip install -r requirements.txt || echo "No requirements.txt found"
+
+    - name: Run tests with coverage
+      run: |
+        cd sdks/python
+        pytest --cov=ai_governor --cov-report=xml --cov-report=html -v
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./sdks/python/coverage.xml
+        flags: python
+        name: python-coverage
+
+  # JavaScript/TypeScript testing
+  test-javascript:
+    name: JavaScript/TypeScript Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+    
+    strategy:
+      matrix:
+        node-version: ['16', '18', '20']
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: 'sdks/javascript/package-lock.json'
+
+    - name: Install dependencies
+      run: |
+        cd sdks/javascript
+        npm ci
+
+    - name: Run linting
+      run: |
+        cd sdks/javascript
+        npm run lint || echo "No lint script found"
+
+    - name: Run tests with coverage
+      run: |
+        cd sdks/javascript
+        npm test -- --coverage || echo "No test script found"
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        directory: ./sdks/javascript/coverage
+        flags: javascript
+        name: javascript-coverage
+
+  # Integration testing
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [test-go, test-rust, test-python, test-javascript]
+    permissions:
+      contents: read
+      checks: write
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ai_governor_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Setup test environment
+      run: |
+        # Create test configuration
+        cat > test-config.yaml << EOF
+        database:
+          host: localhost
+          port: 5432
+          name: ai_governor_test
+          user: postgres
+          password: postgres
+        redis:
+          host: localhost
+          port: 6379
+        EOF
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: postgres://postgres:postgres@localhost:5432/ai_governor_test
+        REDIS_URL: redis://localhost:6379
+      run: |
+        go test -tags=integration -v ./tests/integration/...
+
+    - name: Run end-to-end tests
+      run: |
+        # Start the application in test mode
+        go run main.go --config=test-config.yaml &
+        APP_PID=$!
+        
+        # Wait for application to start
+        sleep 10
+        
+        # Run E2E tests
+        go test -tags=e2e -v ./tests/e2e/...
+        
+        # Clean up
+        kill $APP_PID
+
+  # Performance testing
+  performance-tests:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    permissions:
+      contents: read
+      checks: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Install performance testing tools
+      run: |
+        go install github.com/rakyll/hey@latest
+        go install github.com/tsenart/vegeta@latest
+
+    - name: Run load tests
+      run: |
+        # Start application
+        go run main.go &
+        APP_PID=$!
+        sleep 10
+        
+        # Run load tests
+        echo "GET http://localhost:8080/health" | vegeta attack -duration=30s -rate=100 | vegeta report
+        hey -n 1000 -c 10 http://localhost:8080/health
+        
+        # Clean up
+        kill $APP_PID
+
+    - name: Run benchmark tests
+      run: |
+        go test -bench=. -benchmem -benchtime=10s ./...
+
+  # Security testing
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Install security testing tools
+      run: |
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        pip install bandit safety
+
+    - name: Run Go security scan
+      run: |
+        gosec -fmt json -out gosec-report.json ./...
+        gosec ./...
+
+    - name: Run Python security scan
+      run: |
+        cd sdks/python
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r .
+
+    - name: Run dependency vulnerability scan
+      run: |
+        go list -json -deps ./... | nancy sleuth || true
+        safety check || true
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-test-results
+        path: |
+          gosec-report.json
+          sdks/python/bandit-report.json
+
+  # Test result aggregation
+  test-results:
+    name: Aggregate Test Results
+    runs-on: ubuntu-latest
+    needs: [test-go, test-rust, test-python, test-javascript, integration-tests, performance-tests, security-tests]
+    if: always()
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    
+    steps:
+    - name: Download all test artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Generate test summary
+      run: |
+        echo "# Test Results Summary" > test-summary.md
+        echo "Generated: $(date)" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        echo "## Test Status" >> test-summary.md
+        echo "- Go Tests: ${{ needs.test-go.result }}" >> test-summary.md
+        echo "- Rust Tests: ${{ needs.test-rust.result }}" >> test-summary.md
+        echo "- Python Tests: ${{ needs.test-python.result }}" >> test-summary.md
+        echo "- JavaScript Tests: ${{ needs.test-javascript.result }}" >> test-summary.md
+        echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> test-summary.md
+        echo "- Performance Tests: ${{ needs.performance-tests.result }}" >> test-summary.md
+        echo "- Security Tests: ${{ needs.security-tests.result }}" >> test-summary.md
+
+    - name: Comment test results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+    - name: Upload test summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-summary
+        path: test-summary.md

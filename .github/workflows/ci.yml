@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -14,6 +21,9 @@ jobs:
   test:
     name: Test Suite
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      checks: write
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
@@ -78,6 +88,9 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout code
@@ -104,6 +117,9 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     
     steps:
     - name: Checkout code
@@ -149,6 +165,9 @@ jobs:
   benchmark:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     
     steps:
     - name: Checkout code
@@ -186,6 +205,9 @@ jobs:
   build:
     name: Build Release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      checks: write
     strategy:
       matrix:
         include:
@@ -275,6 +297,9 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: [test, security]
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - name: Checkout code
@@ -317,6 +342,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security, coverage, build, docker]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+      packages: write
     
     steps:
     - name: Checkout code
@@ -332,7 +360,6 @@ jobs:
     - name: Generate changelog
       id: changelog
       run: |
-        # Generate changelog from git commits
         echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
         git log --pretty=format:"- %s" $(git describe --tags --abbrev=0)..HEAD >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
@@ -353,7 +380,7 @@ jobs:
           ## Installation
           ```bash
           # Download binary
-          curl -L https://github.com/morningstarxcdcode/universal-ai-governor/releases/download/v${{ github.run_number }}/universal-ai-governor-linux-amd64 -o universal-ai-governor
+          curl -L https://github.com/MStarRobotics/Universal-AI-Governor/releases/download/v${{ github.run_number }}/universal-ai-governor-linux-amd64 -o universal-ai-governor
           chmod +x universal-ai-governor
           
           # Or use Docker

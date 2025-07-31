@@ -10,21 +10,27 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  checks: write
+  pull-requests: write
+
 jobs:
   analyze:
     name: CodeQL Security Analysis
     runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
     timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
     permissions:
-      actions: read
       contents: read
       security-events: write
+      actions: read
 
     strategy:
       fail-fast: false
       matrix:
         language: [ 'go', 'javascript', 'python', 'rust' ]
-        # CodeQL supports: 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift'
 
     steps:
     - name: Checkout repository
@@ -78,14 +84,7 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         config-file: ./.github/codeql/codeql-config.yml
-        # Advanced queries for comprehensive security analysis
         queries: +security-and-quality,security-experimental,security-extended
-        # Custom query packs for AI/ML security
-        packs: |
-          codeql/go-queries
-          codeql/javascript-queries  
-          codeql/python-queries
-          codeql/rust-queries
 
     # Build the codebase for analysis
     - name: Build Go code
@@ -119,7 +118,6 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
         upload: true
-        # Advanced analysis options
         ram: 6144
         threads: 4
 
@@ -135,6 +133,9 @@ jobs:
     name: AI/ML Security Analysis
     runs-on: ubuntu-latest
     needs: analyze
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout code
@@ -148,7 +149,6 @@ jobs:
     - name: Install AI security scanning tools
       run: |
         pip install bandit safety semgrep
-        # Install AI/ML specific security scanners
         pip install dlint tensorflow-privacy
 
     - name: Run Bandit security scan
@@ -168,7 +168,6 @@ jobs:
 
     - name: AI/ML specific security checks
       run: |
-        # Check for common AI/ML security issues
         echo "Scanning for AI/ML security vulnerabilities..."
         
         # Check for hardcoded model paths
@@ -194,6 +193,9 @@ jobs:
   dependency-security:
     name: Advanced Dependency Security
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout code
@@ -209,11 +211,7 @@ jobs:
 
     - name: Install security scanning tools
       run: |
-        # Go security tools
-        go install github.com/securecodewarrior/nancy@latest
         go install github.com/sonatypecommunity/nancy@latest
-        
-        # Rust security tools
         cargo install cargo-audit cargo-deny
 
     - name: Go dependency security scan
@@ -240,6 +238,9 @@ jobs:
   compliance-check:
     name: Security Compliance Validation
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
     
     steps:
     - name: Checkout code

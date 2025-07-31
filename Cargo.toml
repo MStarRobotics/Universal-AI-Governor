@@ -46,7 +46,7 @@ ring = "0.17"
 zeroize = { version = "1.7", features = ["derive"] }
 
 # Database support - Updated to fix security vulnerabilities
-sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.7.4", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
 
 # Caching
 redis = { version = "0.24", features = ["tokio-comp"] }
