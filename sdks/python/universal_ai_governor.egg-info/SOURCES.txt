@@ -1,0 +1,15 @@
+README.md
+setup.py
+ai_governor/__init__.py
+ai_governor/cli.py
+ai_governor/client.py
+ai_governor/models.py
+tests/__init__.py
+tests/test_client.py
+tests/test_models.py
+universal_ai_governor.egg-info/PKG-INFO
+universal_ai_governor.egg-info/SOURCES.txt
+universal_ai_governor.egg-info/dependency_links.txt
+universal_ai_governor.egg-info/entry_points.txt
+universal_ai_governor.egg-info/requires.txt
+universal_ai_governor.egg-info/top_level.txt

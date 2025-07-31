@@ -30,7 +30,11 @@ describe('GovernorClient', () => {
     test('should initialize client correctly', () => {
         expect(mockedAxios.create).toHaveBeenCalledWith({
             baseURL: 'http://localhost:8080',
-            headers: { 'Authorization': 'Bearer test-api-key' }
+            headers: { 
+                'Authorization': 'Bearer test-api-key',
+                'Content-Type': 'application/json'
+            },
+            timeout: 30000
         });
     });
 
@@ -90,7 +94,7 @@ describe('GovernorClient', () => {
 
         const logs = await client.getAuditLogs();
 
-        expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v1/audit');
+        expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/v1/audit', { params: {} });
         expect(logs).toEqual(mockLogs);
     });
 

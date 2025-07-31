@@ -1,0 +1,2 @@
+[console_scripts]
+ai-governor = ai_governor.cli:main

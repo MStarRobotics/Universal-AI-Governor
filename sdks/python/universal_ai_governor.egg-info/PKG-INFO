@@ -1,0 +1,82 @@
+Metadata-Version: 2.4
+Name: universal-ai-governor
+Version: 1.0.0
+Summary: Python SDK for Universal AI Governor
+Home-page: https://github.com/MStarRobotics/Universal-AI-Governor
+Author: Sourav Rajak
+Author-email: morningstar.xcd@gmail.com
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.31.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: httpx>=0.24.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
+Requires-Dist: flake8>=6.0.0; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Universal AI Governor Python SDK
+
+Python client library for the Universal AI Governor platform.
+
+## Installation
+
+```bash
+pip install universal-ai-governor
+```
+
+## Usage
+
+```python
+from ai_governor import GovernorClient
+
+# Initialize client
+client = GovernorClient("http://localhost:8080", api_key="your-api-key")
+
+# Get policies
+policies = await client.get_policies()
+
+# Create a new policy
+policy = Policy(
+    name="My Policy",
+    description="A custom policy",
+    rules={"max_tokens": 1000},
+    enabled=True
+)
+created_policy = await client.create_policy(policy)
+```
+
+## Features
+
+- Async/await support
+- Type hints with Pydantic models
+- Comprehensive error handling
+- Full API coverage
+
+## Documentation
+
+For full documentation, visit: https://github.com/MStarRobotics/Universal-AI-Governor
