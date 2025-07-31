@@ -1,0 +1,198 @@
+# Advanced CodeQL Configuration for Universal AI Governor
+# Comprehensive security analysis with AI/ML specific checks
+
+name: "Universal AI Governor Security Analysis"
+
+# Disable default queries to use custom advanced ones
+disable-default-queries: false
+
+# Include additional query packs for comprehensive analysis
+queries:
+  - name: security-and-quality
+    uses: security-and-quality
+  - name: security-experimental  
+    uses: security-experimental
+  - name: security-extended
+    uses: security-extended
+
+# Custom query suites for AI/ML security
+query-filters:
+  - include:
+      kind: 
+        - problem
+        - path-problem
+      precision:
+        - high
+        - very-high
+      severity:
+        - error
+        - warning
+        - recommendation
+
+# Language-specific configurations
+go:
+  # Go-specific security queries
+  queries:
+    - uses: codeql/go-queries/Security
+    - uses: codeql/go-queries/Correctness
+    - uses: codeql/go-queries/Performance
+  
+  # Custom Go security patterns
+  query-filters:
+    - include:
+        tags:
+          - security
+          - external/cwe/cwe-079  # XSS
+          - external/cwe/cwe-089  # SQL Injection
+          - external/cwe/cwe-078  # Command Injection
+          - external/cwe/cwe-022  # Path Traversal
+          - external/cwe/cwe-094  # Code Injection
+          - external/cwe/cwe-798  # Hard-coded Credentials
+
+rust:
+  # Rust-specific security analysis
+  queries:
+    - uses: codeql/rust-queries/Security
+    - uses: codeql/rust-queries/Correctness
+  
+  query-filters:
+    - include:
+        tags:
+          - security
+          - external/cwe/cwe-119  # Buffer Overflow
+          - external/cwe/cwe-416  # Use After Free
+          - external/cwe/cwe-190  # Integer Overflow
+          - external/cwe/cwe-476  # NULL Pointer Dereference
+
+javascript:
+  # JavaScript/TypeScript security queries
+  queries:
+    - uses: codeql/javascript-queries/Security
+    - uses: codeql/javascript-queries/Correctness
+  
+  query-filters:
+    - include:
+        tags:
+          - security
+          - external/cwe/cwe-079  # XSS
+          - external/cwe/cwe-094  # Code Injection
+          - external/cwe/cwe-020  # Input Validation
+          - external/cwe/cwe-352  # CSRF
+
+python:
+  # Python security analysis with AI/ML focus
+  queries:
+    - uses: codeql/python-queries/Security
+    - uses: codeql/python-queries/Correctness
+  
+  query-filters:
+    - include:
+        tags:
+          - security
+          - external/cwe/cwe-094  # Code Injection
+          - external/cwe/cwe-089  # SQL Injection
+          - external/cwe/cwe-022  # Path Traversal
+          - external/cwe/cwe-502  # Deserialization
+          - external/cwe/cwe-798  # Hard-coded Credentials
+
+# Path filters to focus on important code
+paths:
+  - "src/**"
+  - "internal/**"
+  - "cmd/**"
+  - "sdks/**"
+  - "scripts/**"
+
+# Exclude paths that don't need security analysis
+paths-ignore:
+  - "docs/**"
+  - "examples/**"
+  - "test-data/**"
+  - "*.md"
+  - "*.txt"
+  - "*.json"
+  - "*.yml"
+  - "*.yaml"
+  - "target/**"
+  - "node_modules/**"
+  - ".git/**"
+
+# Custom security patterns for AI/ML applications
+custom-queries:
+  # AI/ML specific security checks
+  - name: "AI Model Security"
+    description: "Detect insecure AI model handling"
+    patterns:
+      - "torch.load"
+      - "pickle.load"
+      - "joblib.load"
+      - "dill.load"
+    
+  - name: "Prompt Injection Detection"
+    description: "Detect potential prompt injection vulnerabilities"
+    patterns:
+      - "eval("
+      - "exec("
+      - "subprocess.call"
+      - "os.system"
+    
+  - name: "Hardcoded Model Paths"
+    description: "Detect hardcoded model file paths"
+    patterns:
+      - "*.gguf"
+      - "*.bin"
+      - "*.pt"
+      - "*.onnx"
+      - "*.safetensors"
+
+# Analysis configuration
+analysis:
+  # Increase analysis depth for better security coverage
+  max-paths: 10000
+  max-memory: 6144
+  timeout: 1800
+  
+  # Enable experimental features
+  experimental:
+    - dataflow-analysis
+    - taint-tracking
+    - control-flow-analysis
+    
+  # Security-focused analysis options
+  security:
+    - enable-all-security-queries
+    - include-experimental-security
+    - deep-taint-analysis
+    - cross-language-analysis
+
+# Reporting configuration
+reporting:
+  # Include detailed security metrics
+  include-metrics: true
+  
+  # Generate comprehensive reports
+  formats:
+    - sarif
+    - csv
+    - json
+  
+  # Security-focused reporting
+  security-focus:
+    - highlight-critical-issues
+    - include-remediation-advice
+    - show-attack-vectors
+    - include-compliance-mapping
+
+# Integration with GitHub Security
+github-security:
+  # Automatically create security advisories for critical issues
+  auto-advisory: true
+  
+  # Integration with Dependabot
+  dependabot-integration: true
+  
+  # Security tab integration
+  security-tab: true
+  
+  # Code scanning alerts
+  code-scanning: true

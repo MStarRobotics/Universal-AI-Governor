@@ -1,0 +1,195 @@
+# Advanced Dependabot configuration for Universal AI Governor
+# Automated dependency updates with security focus
+
+version: 2
+updates:
+  # Rust dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "SECURITY"
+      prefix-development: "DEV"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+      - "security"
+    # Group related updates
+    groups:
+      security-updates:
+        patterns:
+          - "ring"
+          - "rustls*"
+          - "openssl*"
+          - "tss-esapi"
+          - "pkcs11"
+        update-types:
+          - "security"
+      tokio-ecosystem:
+        patterns:
+          - "tokio*"
+          - "tower*"
+          - "axum*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Ignore specific dependencies that need manual review
+    ignore:
+      - dependency-name: "opencv"
+        # OpenCV updates often require system-level changes
+        update-types: ["version-update:semver-major"]
+
+  # Go dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "SECURITY"
+      prefix-development: "DEV"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+      - "security"
+    groups:
+      security-updates:
+        patterns:
+          - "golang.org/x/crypto"
+          - "golang.org/x/net"
+          - "github.com/golang-jwt/jwt*"
+          - "github.com/jackc/pgx*"
+        update-types:
+          - "security"
+      gin-ecosystem:
+        patterns:
+          - "github.com/gin-*"
+        update-types:
+          - "minor"
+          - "patch"
+      opa-ecosystem:
+        patterns:
+          - "github.com/open-policy-agent/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # JavaScript/TypeScript dependencies (SDK)
+  - package-ecosystem: "npm"
+    directory: "/sdks/javascript"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "SECURITY"
+      prefix-development: "DEV"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "sdk"
+      - "security"
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # Python dependencies (SDK)
+  - package-ecosystem: "pip"
+    directory: "/sdks/python"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "SECURITY"
+      prefix-development: "DEV"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+      - "sdk"
+      - "security"
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "SECURITY"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "security"
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "saturday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "morningstarxcdcode"
+    assignees:
+      - "morningstarxcdcode"
+    commit-message:
+      prefix: "CI"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci-cd"
+    groups:
+      actions-updates:
+        patterns:
+          - "actions/*"
+          - "github/*"
+        update-types:
+          - "minor"
+          - "patch"

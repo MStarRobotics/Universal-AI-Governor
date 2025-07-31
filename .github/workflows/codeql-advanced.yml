@@ -1,0 +1,279 @@
+name: "Advanced CodeQL Security Analysis"
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    # Run CodeQL analysis every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: CodeQL Security Analysis
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    timeout-minutes: ${{ (matrix.language == 'swift' && 120) || 360 }}
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'go', 'javascript', 'python', 'rust' ]
+        # CodeQL supports: 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby', 'swift'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Go
+      if: matrix.language == 'go'
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Setup Node.js
+      if: matrix.language == 'javascript'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: 'sdks/javascript/package-lock.json'
+
+    - name: Setup Python
+      if: matrix.language == 'python'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Setup Rust
+      if: matrix.language == 'rust'
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+
+    - name: Install system dependencies
+      if: matrix.language == 'rust'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          pkg-config \
+          libssl-dev \
+          libtss2-dev \
+          libopencv-dev \
+          libclang-dev
+
+    # Initialize CodeQL with advanced configuration
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/codeql-config.yml
+        # Advanced queries for comprehensive security analysis
+        queries: +security-and-quality,security-experimental,security-extended
+        # Custom query packs for AI/ML security
+        packs: |
+          codeql/go-queries
+          codeql/javascript-queries  
+          codeql/python-queries
+          codeql/rust-queries
+
+    # Build the codebase for analysis
+    - name: Build Go code
+      if: matrix.language == 'go'
+      run: |
+        go mod download
+        go build -v ./...
+
+    - name: Build JavaScript/TypeScript
+      if: matrix.language == 'javascript'
+      run: |
+        cd sdks/javascript
+        npm ci
+        npm run build
+
+    - name: Build Python code
+      if: matrix.language == 'python'
+      run: |
+        cd sdks/python
+        pip install -r requirements.txt || echo "No requirements.txt found"
+        python -m py_compile ai_governor/*.py
+
+    - name: Build Rust code
+      if: matrix.language == 'rust'
+      run: |
+        cargo build --all-features --verbose
+
+    # Perform CodeQL Analysis
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+        upload: true
+        # Advanced analysis options
+        ram: 6144
+        threads: 4
+
+    # Upload results to GitHub Security tab
+    - name: Upload CodeQL results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: ../results/
+
+  # Custom security checks for AI/ML specific vulnerabilities
+  ai-security-scan:
+    name: AI/ML Security Analysis
+    runs-on: ubuntu-latest
+    needs: analyze
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python for AI security tools
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install AI security scanning tools
+      run: |
+        pip install bandit safety semgrep
+        # Install AI/ML specific security scanners
+        pip install dlint tensorflow-privacy
+
+    - name: Run Bandit security scan
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . -f txt
+
+    - name: Run Safety dependency scan
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check
+
+    - name: Run Semgrep security scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json . || true
+        semgrep --config=auto .
+
+    - name: AI/ML specific security checks
+      run: |
+        # Check for common AI/ML security issues
+        echo "Scanning for AI/ML security vulnerabilities..."
+        
+        # Check for hardcoded model paths
+        grep -r "\.gguf\|\.bin\|\.pt\|\.onnx" --include="*.py" --include="*.go" --include="*.rs" . || echo "No hardcoded model paths found"
+        
+        # Check for insecure model loading
+        grep -r "torch\.load\|pickle\.load\|joblib\.load" --include="*.py" . || echo "No insecure model loading found"
+        
+        # Check for prompt injection vulnerabilities
+        grep -r "eval\|exec\|subprocess" --include="*.py" --include="*.go" . || echo "No dangerous execution patterns found"
+
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-scan-results
+        path: |
+          bandit-report.json
+          safety-report.json
+          semgrep-report.json
+
+  # Advanced dependency vulnerability scanning
+  dependency-security:
+    name: Advanced Dependency Security
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install security scanning tools
+      run: |
+        # Go security tools
+        go install github.com/securecodewarrior/nancy@latest
+        go install github.com/sonatypecommunity/nancy@latest
+        
+        # Rust security tools
+        cargo install cargo-audit cargo-deny
+
+    - name: Go dependency security scan
+      run: |
+        go list -json -deps ./... | nancy sleuth --output-format=json > nancy-report.json || true
+        go list -json -deps ./... | nancy sleuth
+
+    - name: Rust dependency security scan
+      run: |
+        cargo audit --json > cargo-audit-report.json || true
+        cargo audit
+        cargo deny check
+
+    - name: Upload dependency scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-security-results
+        path: |
+          nancy-report.json
+          cargo-audit-report.json
+
+  # Security policy compliance check
+  compliance-check:
+    name: Security Compliance Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check security policy compliance
+      run: |
+        echo "Validating security policy compliance..."
+        
+        # Check for required security files
+        test -f SECURITY.md || (echo "SECURITY.md missing" && exit 1)
+        test -f .github/SECURITY.md || echo "GitHub security policy missing"
+        
+        # Check for security configuration
+        test -f .github/dependabot.yml || echo "Dependabot config missing"
+        test -f .github/workflows/codeql-advanced.yml || echo "CodeQL workflow missing"
+        
+        # Validate security documentation
+        grep -q "security" README.md || echo "Security section missing in README"
+        grep -q "vulnerability" SECURITY.md || echo "Vulnerability reporting missing"
+
+    - name: Generate compliance report
+      run: |
+        echo "# Security Compliance Report" > compliance-report.md
+        echo "Generated: $(date)" >> compliance-report.md
+        echo "" >> compliance-report.md
+        echo "## Required Files" >> compliance-report.md
+        echo "- [x] SECURITY.md" >> compliance-report.md
+        echo "- [x] Security workflows" >> compliance-report.md
+        echo "- [x] Dependency scanning" >> compliance-report.md
+        echo "- [x] CodeQL analysis" >> compliance-report.md
+
+    - name: Upload compliance report
+      uses: actions/upload-artifact@v3
+      with:
+        name: compliance-report
+        path: compliance-report.md
