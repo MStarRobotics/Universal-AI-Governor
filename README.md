@@ -96,7 +96,7 @@ The core components:
 
 **Hardware Security Layer** - This was the tricky part. Getting TPM integration working properly took me about 3 weeks of debugging. But now it actually works with real hardware.
 
-**AI Policy Synthesizer** - Uses local LLM models (no cloud dependencies) to analyze incidents and generate new policies. I'm using llama.cpp under the hood because it's fast and doesn't require a GPU farm.
+**AI Policy Synthesizer** - Uses local LLM models (no cloud dependencies) to analyze incidents and generate new Rego policies. I'm using llama.cpp under the hood because it's fast and doesn't require a GPU farm.
 
 **Multimedia Processing** - OpenCV for images, custom audio processing, and some clever tricks for video analysis that I probably shouldn't explain in a README.
 
@@ -135,6 +135,7 @@ curl -X POST http://localhost:8080/api/v1/govern/text \
 ```bash
 # Create a custom policy
 curl -X POST http://localhost:8080/api/v1/policies \
+  -H "Content-Type: application/json" \
   -d '{
     "name": "no_financial_data_leaks",
     "policy": "package finance\n\ndefault allow = false\n\nallow {\n    not contains_financial_data(input.content)\n}"
@@ -231,3 +232,4 @@ I mostly work on security-focused systems, with a particular interest in hardwar
 ```
 
 **P.S.** - If you find bugs (and you probably will), please report them. I test everything I can think of, but there are always edge cases I miss.
+

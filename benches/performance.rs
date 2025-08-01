@@ -1,12 +1,12 @@
 //! Performance benchmarks for Universal AI Governor
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use std::collections::HashMap;
 use universal_ai_governor::{
-    policy::{Policy, PolicyManager},
     audit::AuditLogger,
+    policy::{Policy, PolicyManager},
     security::SecurityManager,
 };
-use std::collections::HashMap;
 
 fn benchmark_policy_operations(c: &mut Criterion) {
     c.bench_function("policy_creation", |b| {
@@ -27,8 +27,8 @@ fn benchmark_policy_operations(c: &mut Criterion) {
             let mut manager = PolicyManager::new();
             for i in 0..100 {
                 let policy = Policy {
-                    id: format!("policy-{}", i),
-                    name: format!("Policy {}", i),
+                    id: format!("policy-{i}"),
+                    name: format!("Policy {i}"),
                     description: "Benchmark policy".to_string(),
                     rules: HashMap::new(),
                     enabled: true,
@@ -46,7 +46,7 @@ fn benchmark_audit_logging(c: &mut Criterion) {
             let mut logger = AuditLogger::new();
             for i in 0..100 {
                 logger.log_action(
-                    black_box(format!("user-{}", i)),
+                    black_box(format!("user-{i}")),
                     black_box("benchmark_action".to_string()),
                     black_box("benchmark_resource".to_string()),
                     black_box(HashMap::new()),
