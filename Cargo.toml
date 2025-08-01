@@ -44,7 +44,7 @@ ring = "0.17"
 zeroize = { version = "1.7", features = ["derive"] }
 
 # Database support
-sqlx = { version = "0.7.4", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
