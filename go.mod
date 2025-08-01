@@ -33,7 +33,7 @@ replace github.com/universal-ai-governor/internal/types => ./internal/types
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
-	github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/open-policy-agent/opa v0.63.0
 	github.com/stretchr/testify v1.10.0
