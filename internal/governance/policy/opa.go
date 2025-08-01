@@ -2,9 +2,11 @@ package policy
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -247,8 +249,8 @@ func (e *OPAEngine) loadData() error {
 			return fmt.Errorf("failed to create transaction: %w", err)
 		}
 
-		path := storage.MustParsePath("/" + strings.ReplaceAll(dataPath, ".", "/"))
-		if err := e.store.Write(context.Background(), txn, storage.AddOp, path, data); err != nil {
+		storagePath := storage.MustParsePath("/" + strings.ReplaceAll(dataPath, ".", "/"))
+		if err := e.store.Write(context.Background(), txn, storage.AddOp, storagePath, data); err != nil {
 			e.store.Abort(context.Background(), txn)
 			return fmt.Errorf("failed to write data: %w", err)
 		}
@@ -309,7 +311,7 @@ func (e *OPAEngine) Health() types.ComponentHealth {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	txn, err := e.store.NewTransaction(ctx, storage.ReadParams)
+	txn, err := e.store.NewTransaction(ctx, storage.TransactionParams{})
 	if err != nil {
 		return types.ComponentHealth{
 			Status:    types.HealthStatusUnhealthy,

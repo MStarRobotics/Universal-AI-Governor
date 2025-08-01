@@ -94,10 +94,10 @@ func (e *Engine) ProcessRequest(ctx context.Context, req *types.GovernanceReques
 	}
 
 	startTime := time.Now()
-	requestID := req.RequestID
+	requestID := req.ID
 	if requestID == "" {
 		requestID = generateRequestID()
-		req.RequestID = requestID
+		req.ID = requestID
 	}
 
 	e.logger.Info("Processing governance request", "request_id", requestID, "user_id", req.UserID)
@@ -153,11 +153,7 @@ func (e *Engine) ProcessRequest(ctx context.Context, req *types.GovernanceReques
 		Metadata:  req.Metadata,
 	})
 	if err != nil {
-		e.logger.Error("Policy evaluation failed", "request_id", requestID, "error", err)
-		response.Status = types.StatusError
-		response.Error = "Policy evaluation failed"
-		e.metrics.IncrementErrors("policy_evaluation")
-		return response, err
+		return nil, fmt.Errorf("policy evaluation failed: %w", err)
 	}
 
 	auditEntry.Steps = append(auditEntry.Steps, types.AuditStep{
@@ -220,9 +216,7 @@ func (e *Engine) ProcessRequest(ctx context.Context, req *types.GovernanceReques
 
 		llmResponse, err = adapter.Generate(ctx, &types.LLMRequest{
 			Prompt:    req.Prompt,
-			Context:   req.Context,
 			Options:   req.LLMOptions,
-			UserID:    req.UserID,
 		})
 		if err != nil {
 			e.logger.Error("LLM generation failed", "request_id", requestID, "adapter", req.LLMAdapter, "error", err)
@@ -267,7 +261,7 @@ func (e *Engine) ProcessRequest(ctx context.Context, req *types.GovernanceReques
 		if !outputGuardrailResult.Valid {
 			response.Status = types.StatusBlocked
 			response.Reason = outputGuardrailResult.Reason
-			response.Metadata["output_guardrails"] = outputGuardrailResult
+			response.Metadata["guardrails"] = outputGuardrailResult
 			e.auditSvc.LogEntry(auditEntry)
 			e.metrics.IncrementBlocked("output_guardrails")
 			return response, nil
@@ -349,41 +343,163 @@ func (e *Engine) GetMetrics() *Metrics {
 }
 
 // Health returns the health status of the governance engine
-func (e *Engine) Health() *types.HealthStatus {
-	status := &types.HealthStatus{
-		Status:    "healthy",
+func (e *Engine) Health() types.ComponentHealth {
+	status := types.ComponentHealth{
+		Status:    types.HealthStatusHealthy,
 		Timestamp: time.Now(),
 		Components: make(map[string]types.ComponentHealth),
 	}
 
 	// Check policy engine health
-	if policyHealth := e.policyEngine.Health(); policyHealth.Status != "healthy" {
-		status.Status = "degraded"
+	policyHealth := e.policyEngine.Health()
+	if policyHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
 	}
 	status.Components["policy_engine"] = policyHealth
 
 	// Check moderation service health
-	if moderationHealth := e.moderationSvc.Health(); moderationHealth.Status != "healthy" {
-		status.Status = "degraded"
+	moderationHealth := e.moderationSvc.Health()
+	if moderationHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
 	}
 	status.Components["moderation"] = moderationHealth
 
 	// Check guardrails service health
-	if guardrailsHealth := e.guardrailsSvc.Health(); guardrailsHealth.Status != "healthy" {
-		status.Status = "degraded"
+	guardrailsHealth := e.guardrailsSvc.Health()
+	if guardrailsHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
 	}
 	status.Components["guardrails"] = guardrailsHealth
 
 	// Check audit service health
-	if auditHealth := e.auditSvc.Health(); auditHealth.Status != "healthy" {
-		status.Status = "degraded"
+	auditHealth := e.auditSvc.Health()
+	if auditHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
 	}
 	status.Components["audit"] = auditHealth
 
 	// Check LLM adapters health
 	for name, adapter := range e.llmAdapters {
-		if adapterHealth := adapter.Health(); adapterHealth.Status != "healthy" {
-			status.Status = "degraded"
+		adapterHealth := adapter.Health()
+		if adapterHealth.Status != types.HealthStatusHealthy {
+			status.Status = types.HealthStatusDegraded
+		}
+		status.Components["llm_"+name] = adapterHealth
+	}
+
+	return status
+}
+
+// Close gracefully shuts down the governance engine
+func (e *Engine) Close() error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.closed {
+		return nil
+	}
+
+	e.logger.Info("Shutting down governance engine")
+
+	// Close all components
+	var errors []error
+
+	if err := e.policyEngine.Close(); err != nil {
+		errors = append(errors, fmt.Errorf("policy engine close error: %w", err))
+	}
+
+	if err := e.moderationSvc.Close(); err != nil {
+		errors = append(errors, fmt.Errorf("moderation service close error: %w", err))
+	}
+
+	if err := e.guardrailsSvc.Close(); err != nil {
+		errors = append(errors, fmt.Errorf("guardrails service close error: %w", err))
+	}
+
+	if err := e.auditSvc.Close(); err != nil {
+		errors = append(errors, fmt.Errorf("audit service close error: %w", err))
+	}
+
+	for name, adapter := range e.llmAdapters {
+		if err := adapter.Close(); err != nil {
+			errors = append(errors, fmt.Errorf("LLM adapter %s close error: %w", name, err))
+		}
+	}
+
+	e.closed = true
+
+	if len(errors) > 0 {
+		return fmt.Errorf("errors during shutdown: %v", errors)
+	}
+
+	e.logger.Info("Governance engine shut down successfully")
+	return nil
+}
+
+// generateRequestID generates a unique request ID
+func generateRequestID() string {
+	return fmt.Sprintf("req_%d", time.Now().UnixNano())
+}
+
+
+// GetLLMAdapters returns the list of available LLM adapters
+func (e *Engine) GetLLMAdapters() []string {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	adapters := make([]string, 0, len(e.llmAdapters))
+	for name := range e.llmAdapters {
+		adapters = append(adapters, name)
+	}
+	return adapters
+}
+
+// GetMetrics returns the current metrics
+func (e *Engine) GetMetrics() *Metrics {
+	return e.metrics
+}
+
+// Health returns the health status of the governance engine
+func (e *Engine) Health() types.ComponentHealth {
+	status := types.ComponentHealth{
+		Status:    types.HealthStatusHealthy,
+		Timestamp: time.Now(),
+		Components: make(map[string]types.ComponentHealth),
+	}
+
+	// Check policy engine health
+	policyHealth := e.policyEngine.Health()
+	if policyHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
+	}
+	status.Components["policy_engine"] = policyHealth
+
+	// Check moderation service health
+	moderationHealth := e.moderationSvc.Health()
+	if moderationHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
+	}
+	status.Components["moderation"] = moderationHealth
+
+	// Check guardrails service health
+	guardrailsHealth := e.guardrailsSvc.Health()
+	if guardrailsHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
+	}
+	status.Components["guardrails"] = guardrailsHealth
+
+	// Check audit service health
+	auditHealth := e.auditSvc.Health()
+	if auditHealth.Status != types.HealthStatusHealthy {
+		status.Status = types.HealthStatusDegraded
+	}
+	status.Components["audit"] = auditHealth
+
+	// Check LLM adapters health
+	for name, adapter := range e.llmAdapters {
+		adapterHealth := adapter.Health()
+		if adapterHealth.Status != types.HealthStatusHealthy {
+			status.Status = types.HealthStatusDegraded
 		}
 		status.Components["llm_"+name] = adapterHealth
 	}

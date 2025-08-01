@@ -65,13 +65,10 @@ jsonwebtoken = "9.0"
 prometheus = { version = "0.13", features = ["process"] }
 
 # Hardware integration (optional)
-tss-esapi = { version = "7.0", optional = true }
-pkcs11 = { version = "0.5", optional = true }
+
 
 [features]
 default = []
-tpm-integration = ["tss-esapi"]
-hsm-integration = ["pkcs11"]
 secure-enclave = []
 adversarial-testing = []
 fuzzing-support = []
@@ -83,7 +80,6 @@ stability-testing = []
 memory-profiling = []
 load-testing = []
 metrics = []
-real-hardware = ["tpm-integration", "hsm-integration"]
 fips-compliance = []
 
 [dev-dependencies]

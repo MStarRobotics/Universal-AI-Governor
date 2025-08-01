@@ -494,15 +494,3 @@ func (tde *ThreatDetectionEngine) recommendAction(score float64, threats []strin
 		return "LOG_AND_MONITOR"
 	}
 }
-
-// SecurityContext represents the security context of a request
-type SecurityContext struct {
-	UserID            string                 `json:"user_id"`
-	SessionID         string                 `json:"session_id"`
-	IPAddress         string                 `json:"ip_address"`
-	UserAgent         string                 `json:"user_agent"`
-	RequestContent    string                 `json:"request_content"`
-	GeolocationData   map[string]interface{} `json:"geolocation_data"`
-	DeviceFingerprint string                 `json:"device_fingerprint"`
-	Timestamp         time.Time              `json:"timestamp"`
-}

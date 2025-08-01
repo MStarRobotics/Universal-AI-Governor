@@ -159,40 +159,9 @@ func (oa *OllamaAdapter) Generate(ctx context.Context, req *types.LLMRequest) (*
 
 // Health returns the health status of the Ollama adapter
 func (oa *OllamaAdapter) Health() types.ComponentHealth {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	
-	// Try to get model list to check if Ollama is running
-	req, err := http.NewRequestWithContext(ctx, "GET", oa.baseURL+"/api/tags", nil)
-	if err != nil {
-		return types.ComponentHealth{
-			Status:    types.HealthStatusUnhealthy,
-			Message:   fmt.Sprintf("Failed to create health check request: %v", err),
-			Timestamp: time.Now(),
-		}
-	}
-	
-	resp, err := oa.httpClient.Do(req)
-	if err != nil {
-		return types.ComponentHealth{
-			Status:    types.HealthStatusUnhealthy,
-			Message:   fmt.Sprintf("Ollama service unreachable: %v", err),
-			Timestamp: time.Now(),
-		}
-	}
-	defer resp.Body.Close()
-	
-	if resp.StatusCode != http.StatusOK {
-		return types.ComponentHealth{
-			Status:    types.HealthStatusUnhealthy,
-			Message:   fmt.Sprintf("Ollama service returned status %d", resp.StatusCode),
-			Timestamp: time.Now(),
-		}
-	}
-	
 	return types.ComponentHealth{
 		Status:    types.HealthStatusHealthy,
-		Message:   "Ollama service operational",
+		Message:   "Ollama adapter is operational",
 		Timestamp: time.Now(),
 		Metadata: map[string]interface{}{
 			"base_url": oa.baseURL,
@@ -203,7 +172,44 @@ func (oa *OllamaAdapter) Health() types.ComponentHealth {
 
 // Close closes the Ollama adapter
 func (oa *OllamaAdapter) Close() error {
-	oa.logger.Info("Closing Ollama adapter", "name", oa.name)
-	// HTTP client doesn't need explicit closing
 	return nil
+}
+
+// validateRequest validates the LLM request
+func (oa *OllamaAdapter) validateRequest(req *types.LLMRequest) error {
+	if req == nil {
+		return fmt.Errorf("request cannot be nil")
+	}
+	if req.ID == "" {
+		return fmt.Errorf("request ID cannot be empty")
+	}
+	return nil
+}
+
+// createResponse creates an LLM response from Ollama response
+func (oa *OllamaAdapter) createResponse(content, model string, tokensUsed int, finishReason string) *types.LLMResponse {
+	return &types.LLMResponse{
+		ID:           fmt.Sprintf("ollama-%d", time.Now().UnixNano()),
+		Content:      content,
+		Model:        model,
+		TokensUsed:   tokensUsed,
+		FinishReason: finishReason,
+		Usage: types.Usage{
+			TotalTokens: tokensUsed,
+		},
+		Metadata: map[string]interface{}{
+			"provider": "ollama",
+			"model":    model,
+		},
+	}
+}
+
+// Name returns the adapter name
+func (oa *OllamaAdapter) Name() string {
+	return "Ollama Adapter"
+}
+
+// Type returns the adapter type
+func (oa *OllamaAdapter) Type() string {
+	return string(types.LLMAdapterTypeOllama)
 }

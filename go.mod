@@ -4,7 +4,34 @@ go 1.23.0
 
 toolchain go1.24.2
 
+replace github.com/universal-ai-governor => ./
+
+replace github.com/universal-ai-governor/internal/api => ./internal/api
+
+replace github.com/universal-ai-governor/internal/config => ./internal/config
+
+replace github.com/universal-ai-governor/internal/governance => ./internal/governance
+
+replace github.com/universal-ai-governor/internal/governance/adapters => ./internal/governance/adapters
+
+replace github.com/universal-ai-governor/internal/governance/audit => ./internal/governance/audit
+
+replace github.com/universal-ai-governor/internal/governance/guardrails => ./internal/governance/guardrails
+
+replace github.com/universal-ai-governor/internal/governance/moderation => ./internal/governance/moderation
+
+replace github.com/universal-ai-governor/internal/governance/policy => ./internal/governance/policy
+
+replace github.com/universal-ai-governor/internal/logging => ./internal/logging
+
+replace github.com/universal-ai-governor/internal/middleware => ./internal/middleware
+
+replace github.com/universal-ai-governor/internal/security => ./internal/security
+
+replace github.com/universal-ai-governor/internal/types => ./internal/types
+
 require (
+	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/open-policy-agent/opa v0.63.0
@@ -24,10 +51,8 @@ require (
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
-	github.com/gin-contrib/cors v1.7.6 // indirect
 	github.com/gin-contrib/sse v1.1.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect

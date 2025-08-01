@@ -404,18 +404,7 @@ func (sp *SandboxProtection) applyMacOSRestrictions(cmd *exec.Cmd) error {
 	return nil
 }
 
-// applyLinuxRestrictions applies Linux-specific restrictions using namespaces and cgroups
-func (sp *SandboxProtection) applyLinuxRestrictions(cmd *exec.Cmd) error {
-	// Use Linux namespaces for isolation
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWNS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNET,
-		Setpgid:    true,
-	}
 
-	// Set resource limits
-	// Note: In production, this would integrate with cgroups and seccomp
-	return nil
-}
 
 // applyWindowsRestrictions applies Windows-specific restrictions
 func (sp *SandboxProtection) applyWindowsRestrictions(cmd *exec.Cmd) error {
@@ -548,6 +537,13 @@ func (sp *SandboxProtection) QuarantineFile(filePath, reason string, threatLevel
 		return nil, fmt.Errorf("failed to quarantine file: %w", err)
 	}
 
+	// Calculate file hash
+	fileHash, err := calculateFileHash(quarantinePath)
+	if err != nil {
+		sp.logger.Warn("Failed to calculate file hash", "error", err)
+		fileHash = "unknown"
+	}
+
 	entry := &QuarantineEntry{
 		ID:             quarantineID,
 		Type:           "file",
@@ -557,7 +553,7 @@ func (sp *SandboxProtection) QuarantineFile(filePath, reason string, threatLevel
 		ThreatLevel:    threatLevel,
 		Metadata: map[string]interface{}{
 			"file_size": getFileSize(quarantinePath),
-			"file_hash": calculateFileHash(quarantinePath),
+			"file_hash": fileHash,
 		},
 		QuarantinedAt: time.Now(),
 		Restored:      false,

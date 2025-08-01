@@ -412,7 +412,7 @@ func (ep *EnclaveProtection) testEnclaveKeyAccess(keyID string) error {
 	
 	// This would perform an actual cryptographic operation with the enclave key
 	// For demonstration, we'll simulate the test
-	ep.logger.Debug("Testing enclave key access", "key_id", keyID)
+	ep.logger.Debug("Testing enclave key access", "key_id", keyID, "test_data_len", len(testData))
 	
 	return nil
 }
