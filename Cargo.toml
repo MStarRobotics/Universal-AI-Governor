@@ -61,6 +61,8 @@ futures = "0.3"
 # JSON Web Tokens
 jsonwebtoken = "9.0"
 
+protobuf = "3.7.2"
+
 # Metrics
 prometheus = { version = "0.13", features = ["process"] }
 
