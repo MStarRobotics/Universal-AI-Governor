@@ -133,7 +133,7 @@ torch.save(model.state_dict(), 'models/vision_security/resnet50_mock.pth')
         cargo test --release --test multimedia::vision_attack_tests -- --format json > vision_attack_results.json
 
     - name: Upload vision test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: vision-attack-results
         path: vision_attack_results.json
@@ -220,7 +220,7 @@ model = whisper.load_model('base')
         cargo test --release --test multimedia::audio_attack_tests -- --format json > audio_attack_results.json
 
     - name: Upload audio test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: audio-attack-results
         path: audio_attack_results.json
@@ -292,7 +292,7 @@ model = whisper.load_model('base')
         cargo test --release --test regulatory::gdpr_compliance_tests -- --format json > gdpr_compliance_results.json
 
     - name: Upload GDPR test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: gdpr-compliance-results
         path: gdpr_compliance_results.json
@@ -348,7 +348,7 @@ model = whisper.load_model('base')
         cargo test --release --test regulatory::hipaa_compliance_tests -- --format json > hipaa_compliance_results.json
 
     - name: Upload HIPAA test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: hipaa-compliance-results
         path: hipaa_compliance_results.json
@@ -459,7 +459,7 @@ model = whisper.load_model('base')
         pkill -f universal-ai-governor || true
 
     - name: Upload load test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: load-test-results-${{ matrix.load_scenario }}
         path: |
@@ -522,7 +522,7 @@ model = whisper.load_model('base')
         cargo test --target ${{ env.TARGET }} --no-run --features "iot-deployment,edge-computing"
 
     - name: Upload IoT build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: iot-builds-${{ matrix.platform }}
         path: target/${{ env.TARGET }}/release/universal-ai-governor
@@ -539,7 +539,7 @@ model = whisper.load_model('base')
       uses: actions/checkout@v4
 
     - name: Download all test artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Setup Python for advanced reporting
       uses: actions/setup-python@v4
@@ -580,7 +580,7 @@ model = whisper.load_model('base')
           --output executive-summary.pdf
 
     - name: Upload comprehensive reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: comprehensive-reports
         path: |
