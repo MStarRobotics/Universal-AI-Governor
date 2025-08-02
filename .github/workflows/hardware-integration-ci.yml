@@ -112,12 +112,7 @@ jobs:
         # Set up software TPM
         echo "EMULATE_TPM_WINDOWS=true" >> $env:GITHUB_ENV
 
-    - name: Setup Secure Enclave Emulation (macOS)
-      if: matrix.os == 'macos-latest' && matrix.hardware-config.enclave
-      run: |
-        # Enable Secure Enclave emulation on macOS
-        echo "SECURE_ENCLAVE_AVAILABLE=true" >> $GITHUB_ENV
-        # Note: Real Secure Enclave testing requires physical hardware
+    
 
     - name: Setup HSM Emulation
       if: matrix.hardware-config.hsm
