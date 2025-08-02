@@ -175,7 +175,7 @@ jobs:
 
     - name: Upload test reports
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-reports-${{ matrix.os }}-${{ matrix.hardware-config.name }}
         path: test-reports/
@@ -230,7 +230,7 @@ jobs:
         cargo test --release --features "fips-compliance" compliance_tests
 
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-reports
         path: |
@@ -298,7 +298,7 @@ jobs:
         cargo doc2readme --template README.template.md
 
     - name: Upload documentation artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation
         path: |
@@ -383,7 +383,7 @@ jobs:
         python scripts/analyze_performance.py performance-results.json
 
     - name: Upload performance reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-reports
         path: |
@@ -424,7 +424,7 @@ jobs:
         sha256sum *.tar.gz > checksums.txt
 
     - name: Upload release artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: release-artifacts
         path: |
@@ -443,7 +443,7 @@ jobs:
 
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Generate comprehensive report
       run: |
