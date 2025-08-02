@@ -184,6 +184,8 @@ jobs:
     permissions:
       contents: read
       checks: write
+    env:
+      RUST_BACKTRACE: full
     
     steps:
     - name: Checkout code
@@ -214,7 +216,13 @@ jobs:
         key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
       
     - name: Run benchmarks
-      run: cargo bench --all-features
+      run: cargo bench --all-features > benchmark_output.txt 2>&1
+      
+    - name: Upload benchmark output
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-output
+        path: benchmark_output.txt
       
     - name: Store benchmark results
       uses: benchmark-action/github-action-benchmark@v1
