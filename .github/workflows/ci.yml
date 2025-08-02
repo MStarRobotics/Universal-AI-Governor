@@ -226,7 +226,7 @@ jobs:
         cargo bench --all-features > benchmark_output.txt 2>&1
       
     - name: Upload benchmark output
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: benchmark-output
         path: benchmark_output.txt
@@ -328,7 +328,7 @@ jobs:
         strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
         
     - name: Upload build artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.asset_name }}
         path: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
@@ -393,7 +393,7 @@ jobs:
         fetch-depth: 0
         
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: artifacts
         
