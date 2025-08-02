@@ -197,13 +197,13 @@ jobs:
         echo "Scanning for AI/ML security vulnerabilities..."
         
         # Check for hardcoded model paths
-        grep -r "\.gguf|\.bin|\.pt|\.onnx" --include="*.py" --include="*.go" --include="*.rs" . || echo "No hardcoded model paths found"
+        grep -r "\.gguf\|\.bin\|\.pt\|\.onnx" --include="*.py" --include="*.go" --include="*.rs" . || echo "No hardcoded model paths found"
         
         # Check for insecure model loading
-        grep -r "torch\.load|pickle\.load|joblib\.load" --include="*.py" . || echo "No insecure model loading found"
+        grep -r "torch\.load\|pickle\.load\|joblib\.load" --include="*.py" . || echo "No insecure model loading found"
         
         # Check for prompt injection vulnerabilities
-        grep -r "eval|exec|subprocess" --include="*.py" --include="*.go" . || echo "No dangerous execution patterns found"
+        grep -r "eval\|exec\|subprocess" --include="*.py" --include="*.go" . || echo "No dangerous execution patterns found"
 
     - name: Upload security scan results
       uses: actions/upload-artifact@v4
