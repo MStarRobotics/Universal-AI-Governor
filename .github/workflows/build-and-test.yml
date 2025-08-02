@@ -70,7 +70,7 @@ jobs:
     - name: Install system dependencies (macOS)
       if: matrix.os == 'macos-latest'
       run: |
-        brew install pkg-config openssl tpm2-tools opencv llvm
+        brew install pkg-config openssl opencv llvm
 
     - name: Install system dependencies (Windows)
       if: matrix.os == 'windows-latest'
