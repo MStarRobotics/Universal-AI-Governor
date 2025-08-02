@@ -216,7 +216,11 @@ jobs:
         key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
       
     - name: Run benchmarks
-      run: cargo bench --all-features > benchmark_output.txt 2>&1
+      run: |
+        ulimit -n 4096
+        cargo clean
+        cargo update
+        cargo bench --all-features > benchmark_output.txt 2>&1
       
     - name: Upload benchmark output
       uses: actions/upload-artifact@v3
