@@ -41,7 +41,7 @@ jobs:
         rm -rf ~/.cargo/registry
         rm -rf ~/.cargo/git
     - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: ${{ matrix.rust }}
         components: rustfmt, clippy
@@ -49,7 +49,7 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
       with:
-        key: ${{ matrix.os }}-${{ matrix.rust }}
+        key: ${{ matrix.os }}-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
         
     - name: Install system dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-latest'
@@ -100,11 +100,17 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
       
     - name: Install cargo-audit
       run: cargo install cargo-audit
@@ -129,6 +135,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       
@@ -146,6 +156,8 @@ jobs:
           
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
       
     - name: Install cargo-tarpaulin
       run: cargo install cargo-tarpaulin
@@ -177,6 +189,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       
@@ -194,6 +210,8 @@ jobs:
           
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
       
     - name: Run benchmarks
       run: cargo bench --all-features
@@ -240,6 +258,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -254,7 +276,7 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
       with:
-        key: ${{ matrix.os }}-${{ matrix.target }}
+        key: ${{ matrix.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
         
     - name: Install system dependencies (Ubuntu)
       if: matrix.os == 'ubuntu-latest'

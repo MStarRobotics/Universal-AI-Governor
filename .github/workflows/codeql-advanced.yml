@@ -44,6 +44,11 @@ jobs:
       with:
         go-version: '1.21'
         cache: true
+    - name: Go mod download
+      if: matrix.language == 'go'
+      run: |
+        go mod tidy
+        go mod download
 
     - name: Setup Node.js
       if: matrix.language == 'javascript'
@@ -52,6 +57,11 @@ jobs:
         node-version: '18'
         cache: 'npm'
         cache-dependency-path: 'sdks/javascript/package-lock.json'
+    - name: Install JS dependencies
+      if: matrix.language == 'javascript'
+      run: |
+        cd sdks/javascript
+        npm ci
 
     - name: Setup Python
       if: matrix.language == 'python'
@@ -59,12 +69,28 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
+    - name: Install Python dependencies
+      if: matrix.language == 'python'
+      run: |
+        cd sdks/python
+        pip install -r requirements.txt || echo "No requirements.txt found"
 
+    - name: Clear Rust caches
+      if: matrix.language == 'rust'
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust
       if: matrix.language == 'rust'
       uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      if: matrix.language == 'rust'
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install system dependencies
       if: matrix.language == 'rust'
@@ -216,6 +242,8 @@ jobs:
 
     - name: Go dependency security scan
       run: |
+        go mod tidy
+        go mod download
         go list -json -deps ./... | nancy sleuth --output-format=json > nancy-report.json || true
         go list -json -deps ./... | nancy sleuth
 

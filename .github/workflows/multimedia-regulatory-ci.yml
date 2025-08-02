@@ -68,6 +68,11 @@ jobs:
         profile: minimal
         override: true
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Install vision processing dependencies
       run: |
         sudo apt-get update
@@ -149,6 +154,11 @@ torch.save(model.state_dict(), 'models/vision_security/resnet50_mock.pth')
         toolchain: stable
         profile: minimal
         override: true
+
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
 
     - name: Install audio processing dependencies
       run: |
@@ -232,6 +242,11 @@ model = whisper.load_model('base')
         profile: minimal
         override: true
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Setup privacy compliance tools
       run: |
         sudo apt-get update
@@ -299,6 +314,11 @@ model = whisper.load_model('base')
         profile: minimal
         override: true
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Build with HIPAA features
       run: |
         cargo build --release --features "hipaa-compliance,phi-detection,healthcare-privacy"
@@ -354,6 +374,11 @@ model = whisper.load_model('base')
         toolchain: stable
         profile: minimal
         override: true
+
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
 
     - name: Install load testing tools
       run: |

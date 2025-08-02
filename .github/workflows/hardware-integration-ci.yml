@@ -74,6 +74,11 @@ jobs:
         override: true
         components: rustfmt, clippy
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Cache Rust dependencies
       uses: actions/cache@v3
       with:
@@ -196,6 +201,11 @@ jobs:
         override: true
         components: rustfmt, clippy
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Install security audit tools
       run: |
         cargo install cargo-audit
@@ -247,6 +257,11 @@ jobs:
         toolchain: stable
         profile: minimal
         override: true
+
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
 
     - name: Install documentation tools
       run: |

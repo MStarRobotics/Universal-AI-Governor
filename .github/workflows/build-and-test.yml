@@ -43,7 +43,7 @@ jobs:
         rm -rf ~/.cargo/registry
         rm -rf ~/.cargo/git
     - name: Setup Rust toolchain
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: ${{ matrix.rust }}
         components: rustfmt, clippy
@@ -80,7 +80,7 @@ jobs:
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
-        key: ${{ matrix.os }}-${{ matrix.rust }}
+        key: ${{ matrix.os }}-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Check Rust formatting
       if: matrix.rust == 'stable'
@@ -98,6 +98,7 @@ jobs:
 
     - name: Build Go code
       run: |
+        go mod tidy
         go mod download
         go build -v ./...
 
@@ -144,6 +145,11 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
@@ -157,6 +163,8 @@ jobs:
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Install benchmark tools
       run: |
@@ -225,6 +233,11 @@ jobs:
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
+
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
@@ -243,6 +256,8 @@ jobs:
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Run integration tests
       env:
@@ -342,6 +357,11 @@ jobs:
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
+
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
 
     - name: Install documentation tools
       run: |

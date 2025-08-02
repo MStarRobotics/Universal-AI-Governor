@@ -79,16 +79,26 @@ jobs:
         go-version: '1.21'
         cache: true
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         components: rustfmt, clippy
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ runner.os }}-rust-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
         cache: 'npm'
+        cache-dependency-path: 'sdks/javascript/package-lock.json'
 
     - name: Install security scanning tools
       run: |
@@ -106,6 +116,8 @@ jobs:
     - name: Go vulnerability scan
       run: |
         echo "Running Go vulnerability checks..."
+        go mod tidy
+        go mod download
         govulncheck ./...
         go list -json -deps ./... | nancy sleuth
 
@@ -119,6 +131,7 @@ jobs:
       run: |
         if [ -f "sdks/javascript/package.json" ]; then
           cd sdks/javascript
+          npm ci
           npm audit --audit-level=moderate
           retire --path .
         fi
@@ -127,6 +140,7 @@ jobs:
       run: |
         if [ -f "sdks/python/requirements.txt" ]; then
           cd sdks/python
+          pip install -r requirements.txt
           safety check -r requirements.txt
           bandit -r . -f json -o bandit-report.json
         fi

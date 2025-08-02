@@ -65,6 +65,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -138,6 +142,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -230,6 +238,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -301,6 +313,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Clear Rust caches
+      run: |
+        rm -rf ~/.cargo/registry
+        rm -rf ~/.cargo/git
     - name: Setup Rust toolchain
       uses: actions-rs/toolchain@v1
       with:

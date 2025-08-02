@@ -13,6 +13,10 @@ keywords = ["ai", "security", "governance", "tpm", "enterprise"]
 categories = ["security", "web-programming", "api-bindings"]
 rust-version = "1.70"
 
+[patch.crates-io]
+protobuf = { version = "3.7.2" }
+rsa = { version = "0.9.6" }
+
 [dependencies]
 # Core async runtime
 tokio = { version = "1.0", features = ["full"] }
