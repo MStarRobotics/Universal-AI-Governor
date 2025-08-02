@@ -210,6 +210,9 @@ jobs:
           libopencv-dev \
           libclang-dev
           
+    - name: Install cargo-criterion
+      run: cargo install cargo-criterion
+          
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
       with:
@@ -234,7 +237,6 @@ jobs:
         tool: 'cargo'
         output-file-path: target/criterion/report/index.html
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
 
   build:
     name: Build Release
