@@ -42,7 +42,7 @@ jobs:
       if: matrix.language == 'go'
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
         cache: true
     - name: Go mod download
       if: matrix.language == 'go'
@@ -230,7 +230,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
