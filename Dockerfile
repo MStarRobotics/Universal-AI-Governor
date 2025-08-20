@@ -1,5 +1,5 @@
 # Multi-stage build for Universal AI Governor
-FROM rust:1.75 as rust-builder
+FROM rust:1.80 as rust-builder
 
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
@@ -10,7 +10,7 @@ COPY benches/ ./benches/
 RUN cargo build --release
 
 # Go builder stage
-FROM golang:1.21 as go-builder
+FROM golang:1.23 as go-builder
 
 WORKDIR /app
 COPY go.mod go.sum ./

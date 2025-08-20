@@ -1,10 +1,58 @@
 //! GDPR Compliance Tests for Universal AI Governor
-//! 
+//!
 //! These tests verify compliance with the General Data Protection Regulation (GDPR)
 //! for data protection and privacy requirements.
 
-use universal_ai_governor::*;
-use std::collections::HashMap;
+// Mock implementation functions for GDPR compliance testing
+async fn verify_data_subject_rights() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement data subject rights verification logic
+    Ok(())
+}
+
+async fn verify_lawful_basis() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement lawful basis verification logic
+    Ok(())
+}
+
+async fn verify_data_minimization() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement data minimization verification logic
+    Ok(())
+}
+
+async fn verify_consent_mechanisms() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement consent mechanisms verification logic
+    Ok(())
+}
+
+async fn verify_privacy_by_design() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement privacy by design verification logic
+    Ok(())
+}
+
+async fn verify_breach_notification() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement breach notification verification logic
+    Ok(())
+}
+
+async fn verify_dpia_implementation() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement DPIA verification logic
+    Ok(())
+}
+
+async fn verify_data_retention() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement data retention verification logic
+    Ok(())
+}
+
+async fn verify_data_transfers() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement data transfers verification logic
+    Ok(())
+}
+
+async fn verify_processing_records() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    // Implement processing records verification logic
+    Ok(())
+}
 
 #[cfg(test)]
 mod gdpr_compliance_tests {
@@ -15,7 +63,10 @@ mod gdpr_compliance_tests {
     async fn test_gdpr_data_subject_rights() {
         // Test implementation of GDPR data subject rights (access, rectification, erasure, etc.)
         let result = verify_data_subject_rights().await;
-        assert!(result.is_ok(), "GDPR data subject rights verification failed");
+        assert!(
+            result.is_ok(),
+            "GDPR data subject rights verification failed"
+        );
     }
 
     /// Test lawful basis for data processing
@@ -39,7 +90,10 @@ mod gdpr_compliance_tests {
     async fn test_gdpr_consent_mechanisms() {
         // Test valid consent collection and withdrawal mechanisms
         let result = verify_consent_mechanisms().await;
-        assert!(result.is_ok(), "GDPR consent mechanisms verification failed");
+        assert!(
+            result.is_ok(),
+            "GDPR consent mechanisms verification failed"
+        );
     }
 
     /// Test data protection by design and by default
@@ -55,7 +109,10 @@ mod gdpr_compliance_tests {
     async fn test_gdpr_breach_notification() {
         // Test data breach detection and notification procedures
         let result = verify_breach_notification().await;
-        assert!(result.is_ok(), "GDPR breach notification verification failed");
+        assert!(
+            result.is_ok(),
+            "GDPR breach notification verification failed"
+        );
     }
 
     /// Test Data Protection Impact Assessment (DPIA)
@@ -89,55 +146,4 @@ mod gdpr_compliance_tests {
         let result = verify_processing_records().await;
         assert!(result.is_ok(), "GDPR processing records verification failed");
     }
-}
-
-// Mock implementation functions for GDPR compliance testing
-async fn verify_data_subject_rights() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement data subject rights verification logic
-    Ok(())
-}
-
-async fn verify_lawful_basis() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement lawful basis verification logic
-    Ok(())
-}
-
-async fn verify_data_minimization() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement data minimization verification logic
-    Ok(())
-}
-
-async fn verify_consent_mechanisms() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement consent mechanisms verification logic
-    Ok(())
-}
-
-async fn verify_privacy_by_design() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement privacy by design verification logic
-    Ok(())
-}
-
-async fn verify_breach_notification() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement breach notification verification logic
-    Ok(())
-}
-
-async fn verify_dpia_implementation() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement DPIA verification logic
-    Ok(())
-}
-
-async fn verify_data_retention() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement data retention verification logic
-    Ok(())
-}
-
-async fn verify_data_transfers() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement data transfers verification logic
-    Ok(())
-}
-
-async fn verify_processing_records() -> Result<(), Box<dyn std::error::Error>> {
-    // Implement processing records verification logic
-    Ok(())
 }
