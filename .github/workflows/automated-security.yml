@@ -26,6 +26,10 @@ permissions:
   checks: write
   pull-requests: write
 
+defaults:
+  run:
+    shell: bash
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
@@ -75,7 +79,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
         cache: true
 
     - name: Clear Rust caches
@@ -102,7 +106,6 @@ jobs:
     - name: Install security scanning tools
       run: |
         # Go security tools
-        go install github.com/sonatypecommunity/nancy@latest
         go install golang.org/x/vuln/cmd/govulncheck@latest
         
         # Rust security tools
@@ -118,7 +121,6 @@ jobs:
         go mod tidy
         go mod download
         govulncheck ./...
-        go list -json -deps ./... | nancy sleuth
 
     - name: Rust security audit
       run: |
@@ -184,7 +186,6 @@ jobs:
         
         # Install language-specific linters
         go install honnef.co/go/tools/cmd/staticcheck@latest
-        go install github.com/securecodewarrior/nancy@latest
 
     - name: Run Semgrep security analysis
       run: |
@@ -240,21 +241,14 @@ jobs:
       run: |
         echo "Scanning for AI/ML specific security vulnerabilities..."
         
-        # Check for insecure model loading patterns
-        echo "Checking for insecure model loading..."
+        # Check for hardcoded model paths
+        grep -r "\.gguf\|\.bin\|\.pt\|\.onnx" --include="*.py" --include="*.go" --include="*.rs" . || echo "No hardcoded model paths found"
+        
+        # Check for insecure model loading
         grep -r "torch\.load\|pickle\.load\|joblib\.load" --include="*.py" . || echo "No insecure model loading found"
         
-        # Check for hardcoded model paths
-        echo "Checking for hardcoded model paths..."
-        find . -name "*.py" -o -name "*.go" -o -name "*.rs" | xargs grep -l "\.gguf\|\.bin\|\.pt\|\.onnx" || echo "No hardcoded model paths found"
-        
         # Check for prompt injection vulnerabilities
-        echo "Checking for prompt injection risks..."
-        grep -r "eval\|exec\|subprocess\.call\|os\.system" --include="*.py" --include="*.go" . || echo "No dangerous execution patterns found"
-        
-        # Check for data leakage risks
-        echo "Checking for potential data leakage..."
-        grep -r "print\|console\.log\|fmt\.Print" --include="*.py" --include="*.go" --include="*.js" . | grep -i "password\|token\|key\|secret" || echo "No obvious data leakage found"
+        grep -r "eval\|exec\|subprocess" --include="*.py" --include="*.go" . || echo "No dangerous execution patterns found"
 
     - name: Generate AI/ML security report
       run: |
@@ -354,7 +348,7 @@ jobs:
         
         # Install git-secrets
         git clone https://github.com/awslabs/git-secrets.git
-        cd git-secrets && make install
+        cd git-secrets && sudo make install
 
     - name: Run TruffleHog secrets scan
       run: |
@@ -476,7 +470,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable

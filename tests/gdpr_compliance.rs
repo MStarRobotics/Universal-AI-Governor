@@ -144,6 +144,9 @@ mod gdpr_compliance_tests {
     async fn test_gdpr_processing_records() {
         // Test maintenance of processing activity records
         let result = verify_processing_records().await;
-        assert!(result.is_ok(), "GDPR processing records verification failed");
+        assert!(
+            result.is_ok(),
+            "GDPR processing records verification failed"
+        );
     }
 }
