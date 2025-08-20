@@ -67,6 +67,15 @@ models/*.safetensors
 # Cache directories
 .cache/
 .cargo-cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+node_modules/
+.npm/
+.yarn/
+package-lock.json
 
 # Local development stuff
 local/

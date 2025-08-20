@@ -17,6 +17,10 @@ permissions:
   checks: write
   pull-requests: write
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   analyze:
     name: CodeQL Security Analysis
@@ -42,7 +46,7 @@ jobs:
       if: matrix.language == 'go'
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
         cache: true
     - name: Go mod download
       if: matrix.language == 'go'
@@ -149,7 +153,7 @@ jobs:
 
     # Upload results to GitHub Security tab
     - name: Upload CodeQL results
-      uses: github/codeql-action/upload-sarif@v4
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: ../results/
@@ -230,22 +234,21 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.23'
 
     - name: Setup Rust
       uses: dtolnay/rust-toolchain@stable
 
     - name: Install security scanning tools
       run: |
-        go install github.com/sonatypecommunity/nancy@latest
+        go install golang.org/x/vuln/cmd/govulncheck@latest
         cargo install cargo-audit cargo-deny
 
     - name: Go dependency security scan
       run: |
         go mod tidy
         go mod download
-        go list -json -deps ./... | nancy sleuth --output-format=json > nancy-report.json || true
-        go list -json -deps ./... | nancy sleuth
+        govulncheck ./...
 
     - name: Rust dependency security scan
       run: |
@@ -259,7 +262,6 @@ jobs:
       with:
         name: dependency-security-results
         path: |
-          nancy-report.json
           cargo-audit-report.json
 
   # Security policy compliance check
