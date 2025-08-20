@@ -152,7 +152,7 @@ jobs:
         echo "Generated: $(date)" >> dependency-security-report.md
         echo "" >> dependency-security-report.md
         echo "## Scan Results" >> dependency-security-report.md
-        echo "- Go vulnerabilities: Checked with govulncheck and nancy" >> dependency-security-report.md
+        echo "- Go vulnerabilities: Checked with govulncheck" >> dependency-security-report.md
         echo "- Rust vulnerabilities: Checked with cargo-audit" >> dependency-security-report.md
         echo "- JavaScript vulnerabilities: Checked with npm audit" >> dependency-security-report.md
         echo "- Python vulnerabilities: Checked with safety and bandit" >> dependency-security-report.md

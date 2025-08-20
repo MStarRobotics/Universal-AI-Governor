@@ -308,7 +308,7 @@ jobs:
     - name: Setup tools
       run: |
         # Install security testing tools
-        go install github.com/securecodewarrior/nancy@latest
+        go install golang.org/x/vuln/cmd/govulncheck@latest
         cargo install cargo-audit
         pip install bandit safety
 
@@ -318,7 +318,7 @@ jobs:
         cargo audit
         
         # Go vulnerability check
-        go list -json -deps ./... | nancy sleuth
+        govulncheck ./...
         
         # Python security scan (if applicable)
         find . -name "*.py" -exec bandit {} \; || true
